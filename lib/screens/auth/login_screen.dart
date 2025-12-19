@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:monitoringng1/model/kepala_departemen_model.dart';
+import 'package:monitoringng1/model/pic_line_model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -56,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color.fromARGB(255, 95, 142, 95),
       body: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 400),
@@ -75,11 +77,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.blue[50],
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.factory,
-                      size: 60,
-                      color: Colors.blue,
-                    ),
+                    child: Image.asset(
+                      'assets/logo-futaba.jpg',
+                      fit: BoxFit.contain,
+                    )
                   ),
                   
                   const SizedBox(height: 24),
@@ -88,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: const Color.fromARGB(255, 68, 120, 68),
                     ),
                   ),
                   const Text(
@@ -111,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: TextButton(
                             onPressed: () => setState(() => _isHeadDepartment = true),
                             style: TextButton.styleFrom(
-                              backgroundColor: _isHeadDepartment ? Colors.blue : Colors.transparent,
+                              backgroundColor: _isHeadDepartment ? const Color.fromARGB(255, 68, 120, 68) : Colors.transparent,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -129,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: TextButton(
                             onPressed: () => setState(() => _isHeadDepartment = false),
                             style: TextButton.styleFrom(
-                              backgroundColor: !_isHeadDepartment ? Colors.blue : Colors.transparent,
+                              backgroundColor: !_isHeadDepartment ? const Color.fromARGB(255, 68, 120, 68) : Colors.transparent,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -197,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,           
+                        backgroundColor: const Color.fromARGB(255, 68, 120, 68),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),

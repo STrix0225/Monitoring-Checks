@@ -9,8 +9,8 @@ import 'package:monitoringng1/screens/pic/quality_check_screen.dart';
 void main() => runApp(
   DevicePreview(
     enabled: true,
-    builder: (context) => MyApp(),
-    ),
+    builder: (context) => const MyApp(),
+  ),
 );
 
 class MyApp extends StatelessWidget {
@@ -39,11 +39,11 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/head-dashboard': (context) => const HeadDashboardScreen(),
+        '/head-dashboard': (context) => const DashboardNgPage(),
         '/ng-details': (context) => NgDetailsScreen(
           productName: ModalRoute.of(context)?.settings.arguments as String? ?? 'Unknown Product',
         ),
-        '/pic-dashboard': (context) => const PicDashboardScreen(
+        '/pic-dashboard': (context) => PicDashboardScreen(
           picId: 'PIC-BODY-001',
           category: 'Body Parts',
         ),
