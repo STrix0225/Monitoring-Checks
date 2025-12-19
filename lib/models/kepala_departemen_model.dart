@@ -21,7 +21,7 @@ class KepalaDepartemenModel {
 
    factory KepalaDepartemenModel.fromJson(Map data) {
       return KepalaDepartemenModel(
-         id: data['_id'],
+         id: data['id'] ?? data['_id'] ?? '',
          username: data['username'],
          password: data['password'],
          photo_pic: data['photo_pic'],

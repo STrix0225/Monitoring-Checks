@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:monitoringng1/model/kepala_departemen_model.dart';
-import 'package:monitoringng1/model/pic_line_model.dart';
+import 'package:monitoringng1/models/kepala_departemen_model.dart';
+import 'package:monitoringng1/models/pic_line_model.dart';
+import 'package:monitoringng1/restapi.dart';
+import 'package:monitoringng1/config.dart' as ApiConfig;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,30 +16,98 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _picIdController = TextEditingController();
+  final DataService _dataService = DataService();
   
   bool _isHeadDepartment = true;
   bool _isLoading = false;
 
   void _login() async {
     setState(() => _isLoading = true);
-    
-    await Future.delayed(const Duration(seconds: 1));
-    
-    if (_isHeadDepartment) {
-      if (_usernameController.text == 'head' && _passwordController.text == 'head123') {
-        Navigator.pushReplacementNamed(context, '/head-dashboard');
+
+    try {
+      if (_isHeadDepartment) {
+        final username = _usernameController.text.trim();
+        final password = _passwordController.text;
+
+        if (username.isEmpty || password.isEmpty) {
+          if (mounted) setState(() => _isLoading = false);
+          _showErrorDialog('Username dan password wajib diisi');
+          return;
+        }
+
+        final raw = await _dataService.selectWhere(
+          ApiConfig.token,
+          ApiConfig.project,
+          ApiConfig.CollectionName.headCollection,
+          ApiConfig.appid,
+          'username',
+          username,
+        );
+
+        print('DEBUG: Raw response = $raw');
+        
+        final Map<String, dynamic> response = jsonDecode(raw is String ? raw : raw.toString());
+        print('DEBUG: Decoded response = $response');
+        
+        final List<dynamic> list = response['data'] ?? [];
+        print('DEBUG: Data list = $list');
+        
+        if (list.isEmpty) {
+          _showErrorDialog('Username tidak ditemukan');
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+
+        final user = KepalaDepartemenModel.fromJson(list.first);
+        print('DEBUG: User data = ${user.username}, stored password = ${user.password}, input password = $password');
+        
+        if (user.password != password) {
+          _showErrorDialog('Password salah');
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+
+        if (!mounted) return;
+        try {
+          Navigator.pushReplacementNamed(context, '/head-dashboard', arguments: user);
+        } catch (e) {
+          print('DEBUG: Navigation error = $e');
+          _showErrorDialog('Error navigasi: ${e.toString()}');
+        }
       } else {
-        _showErrorDialog('Username atau password salah');
+        final picId = _picIdController.text.trim();
+        if (picId.isEmpty) {
+          _showErrorDialog('ID PIC tidak boleh kosong');
+          return;
+        }
+
+        final raw = await _dataService.selectWhere(
+          ApiConfig.token,
+          ApiConfig.project,
+          ApiConfig.CollectionName.picCollection,
+          ApiConfig.appid,
+          'id_pic',
+          picId,
+        );
+
+        final Map<String, dynamic> response = jsonDecode(raw is String ? raw : raw.toString());
+        final List<dynamic> picList = response['data'] ?? [];
+        if (picList.isEmpty) {
+          _showErrorDialog('ID PIC tidak ditemukan');
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+
+        final pic = PicLineModel.fromJson(picList.first);
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/pic-dashboard', arguments: pic);
       }
-    } else {
-      if (_picIdController.text.isNotEmpty) {
-        Navigator.pushReplacementNamed(context, '/pic-dashboard');
-      } else {
-        _showErrorDialog('ID PIC tidak boleh kosong');
-      }
+    } catch (e) {
+      print('DEBUG: Login exception = $e');
+      _showErrorDialog('Gagal login. Error: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-    
-    setState(() => _isLoading = false);
   }
 
   void _showErrorDialog(String message) {
