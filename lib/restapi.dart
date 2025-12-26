@@ -3,7 +3,7 @@
 import 'package:http/http.dart' as http;
 
 class DataService {
-   Future insertKepalaDepartemen(String appid, String username, String password, String photo_pic, String nama_pic, String line, String id_pic, String password_pic) async {
+   Future insertKepalaDepartemen(String appid, String username, String password) async {
       String uri = 'https://api.247go.app/v5/insert/';
 
       try {
@@ -13,12 +13,7 @@ class DataService {
             'collection': 'kepala_departemen',
             'appid': appid,
             'username': username,
-            'password': password,
-            'photo_pic': photo_pic,
-            'nama_pic': nama_pic,
-            'line': line,
-            'id_pic': id_pic,
-            'password_pic': password_pic
+            'password': password
          });
 
          if (response.statusCode == 200) {
@@ -29,6 +24,60 @@ class DataService {
          }
       } catch (e) {
          // Print error here
+         return '[]';
+      }
+   }
+
+   Future insertPicLine(String token, String project, String appid, String id_pic, String nama, String line, String password, String photo) async {
+      String uri = 'https://api.247go.app/v5/insert/';
+
+      try {
+         final response = await http.post(Uri.parse(uri), body: {
+            'token': token,
+            'project': project,
+            'collection': 'pic_line',
+            'appid': appid,
+            'id_pic': id_pic,
+            'nama': nama,
+            'line': line,
+            'password': password,
+            'photo': photo
+         });
+
+         if (response.statusCode == 200) {
+            return response.body;
+         } else {
+            // Return an empty array
+            return '[]';
+         }
+      } catch (e) {
+         // Print error here
+         return '[]';
+      }
+   }
+
+   Future upload(String token, String project, List<int> bytes, String extension) async {
+      String uri = 'https://files.247go.app/files/up/token/' + token + '/project/' + project + '/';
+
+      try {
+         var request = http.MultipartRequest('POST', Uri.parse(uri));
+         request.files.add(
+           http.MultipartFile.fromBytes(
+             'file',
+             bytes,
+             filename: 'upload.' + extension,
+           ),
+         );
+
+         var streamed = await request.send();
+         final respStr = await streamed.stream.bytesToString();
+
+         if (streamed.statusCode == 200) {
+            return respStr;
+         } else {
+            return '[]';
+         }
+      } catch (e) {
          return '[]';
       }
    }

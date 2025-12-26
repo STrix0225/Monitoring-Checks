@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "874987672430",
+    "project_id": "monitoring-check",
+    "storage_bucket": "monitoring-check.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:874987672430:android:6c84ce44b9d905b47ce77f",
+        "android_client_info": {
+          "package_name": "com.example.monitoringng1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMSUY9qkuIMjZ_n4b7Tc01RbLwCKOty_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

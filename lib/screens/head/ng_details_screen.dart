@@ -337,7 +337,6 @@ class _NgDetailsScreenState extends State<NgDetailsScreen> {
                       scrollDirection: Axis.horizontal,
                       itemCount: (item['images'] as List).length,
                       itemBuilder: (context, index) {
-                        final image = (item['images'] as List)[index];
                         return Container(
                           width: 100,
                           height: 100,

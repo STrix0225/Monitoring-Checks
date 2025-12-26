@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:monitoringng1/models/kepala_departemen_model.dart';
-import 'package:monitoringng1/models/pic_line_model.dart';
+import 'package:monitoringng1/models/head_departement_model.dart';
+import 'package:monitoringng1/models/pic_model.dart';
 import 'package:monitoringng1/restapi.dart';
 import 'package:monitoringng1/config.dart' as ApiConfig;
 
