@@ -26,11 +26,6 @@ class _PicDashboardScreenState extends State<PicDashboardScreen> {
         'completed': 180,   // Sudah jadi
         'deadline': 'Hari Ini, 16:00', 
         'isUrgent': true,   // Karena deadline mepet
-        'qualityItems': [
-          {'name': 'Ketebalan', 'standard': '3.0 mm'},
-          {'name': 'Penyok', 'standard': 'Tidak ada'},
-          {'name': 'Diameter lubang', 'standard': '12.5 mm'},
-        ],
       },
       {
         'id': 'BP002',
@@ -40,10 +35,6 @@ class _PicDashboardScreenState extends State<PicDashboardScreen> {
         'completed': 50,    // Masih sedikit
         'deadline': 'Besok, 08:00',
         'isUrgent': false,
-        'qualityItems': [
-          {'name': 'Ketebalan', 'standard': '2.8 mm'},
-          {'name': 'Panjang', 'standard': '450 mm'},
-        ],
       },
     ],
   };
@@ -75,12 +66,20 @@ class _PicDashboardScreenState extends State<PicDashboardScreen> {
           ),
         ],
       ),
+      // Floating Action Button untuk Quality Check
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _startQualityCheck(),
+        backgroundColor: Colors.blue,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('QC Baru', style: TextStyle(color: Colors.white)),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Info
+            // Header Info - tanpa tombol "Quality Check"
             Card(
               child: ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.person)),
@@ -148,19 +147,6 @@ class _PicDashboardScreenState extends State<PicDashboardScreen> {
                             Text('${product['completed']} / ${product['dailyTarget']} pcs', style: const TextStyle(fontWeight: FontWeight.bold)),
                           ],
                         ),
-                        
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => _startQualityCheck(product),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('MULAI QUALITY CHECK'),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -173,12 +159,13 @@ class _PicDashboardScreenState extends State<PicDashboardScreen> {
     );
   }
 
-  void _startQualityCheck(Map<String, dynamic> product) {
+  void _startQualityCheck() {
+    // Kirim dengan tipe yang benar untuk menghindari error
     Navigator.pushNamed(
       context,
       '/quality-check',
       arguments: {
-        'product': product,
+        'product': <String, dynamic>{}, // Map kosong dengan tipe yang eksplisit
         'picId': widget.picId,
       },
     );

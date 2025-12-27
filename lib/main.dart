@@ -48,10 +48,42 @@ class MyApp extends StatelessWidget {
           category: 'Body Parts',
         ),
         '/quality-check': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-          return QualityCheckScreen(
-            product: args?['product'] ?? {},
-            picId: args?['picId'] ?? '',
+          final args = ModalRoute.of(context)?.settings.arguments;
+          
+          // Handle jika args null
+          if (args == null) {
+            return const QualityCheckScreen(
+              product: {},
+              picId: '',
+            );
+          }
+          
+          // Coba cast ke Map<String, dynamic>
+          if (args is Map<String, dynamic>) {
+            return QualityCheckScreen(
+              product: args['product'] ?? {},
+              picId: args['picId'] ?? '',
+            );
+          }
+          
+          // Jika args adalah Map<dynamic, dynamic>, convert ke Map<String, dynamic>
+          if (args is Map) {
+            final Map<String, dynamic> convertedArgs = {};
+            args.forEach((key, value) {
+              if (key is String) {
+                convertedArgs[key] = value;
+              }
+            });
+            return QualityCheckScreen(
+              product: convertedArgs['product'] ?? {},
+              picId: convertedArgs['picId'] ?? '',
+            );
+          }
+          
+          // Default fallback
+          return const QualityCheckScreen(
+            product: {},
+            picId: '',
           );
         },
       },
