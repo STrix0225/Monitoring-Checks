@@ -1,6 +1,8 @@
 // ignore_for_file: prefer_interpolation_to_compose_strings, non_constant_identifier_names
 
 import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class DataService {
    Future insertKepalaDepartemen(String appid, String username, String password) async {
@@ -56,31 +58,44 @@ class DataService {
       }
    }
 
-   Future upload(String token, String project, List<int> bytes, String extension) async {
-      String uri = 'https://files.247go.app/files/up/token/' + token + '/project/' + project + '/';
+    Future<dynamic> upload(String token, String project, List<int> file, String ext) async {
+         String url = 'https://files.247go.app/files/up';
 
-      try {
-         var request = http.MultipartRequest('POST', Uri.parse(uri));
-         request.files.add(
-           http.MultipartFile.fromBytes(
-             'file',
-             bytes,
-             filename: 'upload.' + extension,
-           ),
-         );
+         try {
+            var request = http.MultipartRequest('POST', Uri.parse(url));
+            request.fields['token'] = token;
+            request.fields['project'] = project;
 
-         var streamed = await request.send();
-         final respStr = await streamed.stream.bytesToString();
+            request.files.add(
+               http.MultipartFile.fromBytes(
+                  'file',
+                  file,
+                  filename: 'pic_line_${DateTime.now().millisecondsSinceEpoch}.' + ext,
+               ),
+            );
 
-         if (streamed.statusCode == 200) {
-            return respStr;
-         } else {
-            return '[]';
+            final streamed = await request.send();
+
+            if (streamed.statusCode == 200) {
+               final res = await http.Response.fromStream(streamed);
+               final responseBody = res.body;
+               // Debug print to inspect response format
+               print('Upload Response: $responseBody');
+
+               try {
+                  final decoded = jsonDecode(responseBody);
+                  return decoded;
+               } catch (e) {
+                  return responseBody;
+               }
+            } else {
+               throw Exception('Upload failed with status: ${streamed.statusCode}');
+            }
+         } catch (e) {
+            print('Upload error: $e');
+            throw Exception('Upload failed: $e');
          }
-      } catch (e) {
-         return '[]';
-      }
-   }
+    }
 
    Future selectAll(String token, String project, String collection, String appid) async {
       String uri = 'https://api.247go.app/v5/select_all/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid;
