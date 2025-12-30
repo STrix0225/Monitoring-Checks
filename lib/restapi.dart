@@ -2,7 +2,8 @@
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'config.dart' as ApiConfig;
 
 class DataService {
    Future insertKepalaDepartemen(String appid, String username, String password) async {
@@ -28,6 +29,75 @@ class DataService {
          // Print error here
          return '[]';
       }
+   }
+
+   Future insertProducts(String appid, String id, String category_id, String name, String customer, String quantity, String stock, String availability, String quality_status, String check_by, String check_date) async {
+      String uri = 'https://api.247go.app/v5/insert/';
+
+      try {
+         final response = await http.post(Uri.parse(uri), body: {
+            'token': '694514be380728163dc2a32d',
+            'project': 'monitoring_ng',
+            'collection': 'products',
+            'appid': appid,
+            'id': id,
+            'category_id': category_id,
+            'name': name,
+            'customer': customer,
+            'quantity': quantity,
+            'stock': stock,
+            'availability': availability,
+            'quality_status': quality_status,
+            'check_by': check_by,
+            'check_date': check_date
+         });
+
+         if (response.statusCode == 200) {
+            return response.body;
+         } else {
+            // Return an empty array
+            return '[]';
+         }
+      } catch (e) {
+         // Print error here
+         return '[]';
+      }
+   }
+
+   Future insertDailyTarget({
+    required String customer,
+    required String category,
+    required String product,
+    required int targetQty,
+    required DateTime deliveryDate,
+  }) async {
+    String uri = 'https://api.247go.app/v5/insert/';
+
+    try {
+      final response = await http.post(Uri.parse(uri), body: {
+        'token': ApiConfig.token,
+        'project': ApiConfig.project,
+      'collection': 'daily_target',
+        'appid': ApiConfig.appid,
+        'customer': customer,
+        'category': category,
+        'product': product,
+        'target_qty': targetQty.toString(),
+        'delivery_date': deliveryDate.toIso8601String(),
+        'actual_qty': '0',
+        'status': 'Not Started',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      if (response.statusCode == 200) {
+        return response.body;
+      } else {
+        return '[]';
+      }
+    } catch (e) {
+      // Print error here
+      return '[]';
+    }
    }
 
    Future insertPicLine(String token, String project, String appid, String id_pic, String nama, String line, String password, String photo) async {
@@ -57,45 +127,6 @@ class DataService {
          return '[]';
       }
    }
-
-    Future<dynamic> upload(String token, String project, List<int> file, String ext) async {
-         String url = 'https://files.247go.app/files/up';
-
-         try {
-            var request = http.MultipartRequest('POST', Uri.parse(url));
-            request.fields['token'] = token;
-            request.fields['project'] = project;
-
-            request.files.add(
-               http.MultipartFile.fromBytes(
-                  'file',
-                  file,
-                  filename: 'pic_line_${DateTime.now().millisecondsSinceEpoch}.' + ext,
-               ),
-            );
-
-            final streamed = await request.send();
-
-            if (streamed.statusCode == 200) {
-               final res = await http.Response.fromStream(streamed);
-               final responseBody = res.body;
-               // Debug print to inspect response format
-               print('Upload Response: $responseBody');
-
-               try {
-                  final decoded = jsonDecode(responseBody);
-                  return decoded;
-               } catch (e) {
-                  return responseBody;
-               }
-            } else {
-               throw Exception('Upload failed with status: ${streamed.statusCode}');
-            }
-         } catch (e) {
-            print('Upload error: $e');
-            throw Exception('Upload failed: $e');
-         }
-    }
 
    Future selectAll(String token, String project, String collection, String appid) async {
       String uri = 'https://api.247go.app/v5/select_all/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid;
@@ -837,4 +868,77 @@ class DataService {
          return '[]';
       }
    }
+
+    // Method untuk mengambil daily targets berdasarkan tanggal (client-side filter)
+    Future getDailyTargetsByDate(DateTime date) async {
+       String dateStr = DateFormat('yyyy-MM-dd').format(date);
+       try {
+          String response = await selectAll(
+            ApiConfig.token,
+            ApiConfig.project,
+            'daily_target',
+             ApiConfig.appid,
+          );
+
+          if (response == '[]' || response.isEmpty) return '{"data": []}';
+
+          var jsonData = jsonDecode(response);
+          final List<dynamic> allData = jsonData['data'] ?? [];
+
+          final filtered = allData.where((item) {
+             try {
+                final delivery = (item['delivery_date'] ?? '').toString();
+                if (delivery.isEmpty) return false;
+                final parsed = DateTime.parse(delivery);
+                final parsedStr = DateFormat('yyyy-MM-dd').format(parsed);
+                return parsedStr == dateStr;
+             } catch (e) {
+                return false;
+             }
+          }).toList();
+
+          return jsonEncode({'data': filtered});
+       } catch (e) {
+          return '{"data": []}';
+       }
+    }
+    Future<dynamic> upload(String token, String project, List<int> file, String ext) async {
+         String url = 'https://files.247go.app/files/up';
+
+         try {
+            var request = http.MultipartRequest('POST', Uri.parse(url));
+            request.fields['token'] = token;
+            request.fields['project'] = project;
+
+            request.files.add(
+               http.MultipartFile.fromBytes(
+                  'file',
+                  file,
+                  filename: 'pic_line_${DateTime.now().millisecondsSinceEpoch}.' + ext,
+               ),
+            );
+
+            final streamed = await request.send();
+
+            if (streamed.statusCode == 200) {
+               final res = await http.Response.fromStream(streamed);
+               final responseBody = res.body;
+               // Debug print to inspect response format
+               print('Upload Response: $responseBody');
+
+               try {
+                  final decoded = jsonDecode(responseBody);
+                  return decoded;
+               } catch (e) {
+                  return responseBody;
+               }
+            } else {
+               throw Exception('Upload failed with status: ${streamed.statusCode}');
+            }
+         } catch (e) {
+            print('Upload error: $e');
+            throw Exception('Upload failed: $e');
+         }
+    }
+
 }

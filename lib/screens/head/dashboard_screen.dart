@@ -3,10 +3,12 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../restapi.dart';
 import '../../config.dart';
 import '../../models/pic_model.dart';
+import '../../models/daily_target_model.dart';
 import '../../models/product_item_model.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'set_target_screen.dart';
 import '../auth/login_screen.dart';
 
 
@@ -23,12 +25,16 @@ import '../auth/login_screen.dart';
       List<PicLineModel> searchData = [];
       bool isLoading = true;
 
+      List<DailyTargetModel> _dailyTargets = [];
+      bool isLoadingTargets = false;
+
       DataService ds = DataService();
       
     @override
     void initState() {
       super.initState();
-      _loadPicAccounts();
+        _loadPicAccounts();
+        _loadDailyTargets();
     }
 
       Future<void> _loadPicAccounts() async {
@@ -67,6 +73,30 @@ import '../auth/login_screen.dart';
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadDailyTargets() async {
+    setState(() => isLoadingTargets = true);
+    try {
+      print('📥 Loading daily targets for: ${DateTime.now()}');
+      String response = await ds.getDailyTargetsByDate(DateTime.now());
+      print('📦 Response: $response');
+      var responseApi = jsonDecode(response);
+      final List<dynamic> datalist = responseApi['data'] ?? [];
+      print('✅ Total targets loaded: ${datalist.length}');
+
+      setState(() {
+        _dailyTargets = datalist.map((e) {
+          final model = DailyTargetModel.fromJson(e);
+          print('📌 Target: ${model.customer} - ${model.product} - ${model.targetQty}');
+          return model;
+        }).toList();
+      });
+    } catch (e) {
+      print('❌ Error loading daily targets: $e');
+    } finally {
+      setState(() => isLoadingTargets = false);
     }
   }
 
@@ -290,11 +320,10 @@ import '../auth/login_screen.dart';
 
         final List<String> _lineOptions = [
           'Body Parts',
-          'Exhaust System',
-          'Suspension',
-          'Fuel System',
-          'Assembly Line',
-          'Painting Line'
+          'Interior Parts',
+          'Exhaust System Parts',
+          'Suspension Parts',
+          'Fuel System Parts',
         ];
 
         showDialog(
@@ -735,6 +764,20 @@ import '../auth/login_screen.dart';
       @override
       Widget build(BuildContext context) {
         return Scaffold(
+          floatingActionButton: FloatingActionButton(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SetTargetScreen()),
+              );
+              if (result == true) {
+                print('✅ SetTargetScreen returned true, reloading daily targets...');
+                _loadDailyTargets();
+              }
+            },
+            backgroundColor: Colors.blue,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
           backgroundColor: const Color(0xFFF5F6FC),
           appBar: AppBar(
             backgroundColor: Colors.white,
@@ -744,10 +787,6 @@ import '../auth/login_screen.dart';
               style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.black),
-                onPressed: () {},
-              ),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
                 tooltip: "Tambah PIC Baru",
@@ -918,23 +957,21 @@ import '../auth/login_screen.dart';
                 ),
                 const SizedBox(height: 16),
 
-                _buildTargetCard(
-                  customer: "PT Daihatsu",
-                  partName: "Exhaust Manifold",
-                  target: 200,
-                  actual: 150,
-                  status: "On Track",
-                  statusColor: const Color(0xFF4CAF50),
-                ),
-                
-                _buildTargetCard(
-                  customer: "PT Toyota",
-                  partName: "Cowl Assembly",
-                  target: 300,
-                  actual: 280,
-                  status: "On Track",
-                  statusColor: const Color(0xFF4CAF50),
-                ),
+                if (isLoadingTargets)
+                  const Center(child: CircularProgressIndicator())
+                else if (_dailyTargets.isEmpty)
+                  const Center(child: Text('Belum ada target untuk hari ini'))
+                else
+                  ..._dailyTargets.map((target) {
+                    return _buildTargetCard(
+                      customer: target.customer,
+                      partName: target.product,
+                      target: target.targetQty,
+                      actual: 0,
+                      status: 'On Track',
+                      statusColor: const Color(0xFF4CAF50),
+                    );
+                  }).toList(),
 
                 const SizedBox(height: 24),
 
