@@ -258,7 +258,6 @@ class _SetTargetScreenState extends State<SetTargetScreen> {
                       labelText: 'Tanggal Pengiriman',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.calendar_today),
-                      suffixIcon: Icon(Icons.arrow_drop_down),
                     ),
                     controller: TextEditingController(
                       text: _selectedDate != null

@@ -46,10 +46,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
         print('DEBUG: Raw response = $raw');
         
-        final Map<String, dynamic> response = jsonDecode(raw is String ? raw : raw.toString());
-        print('DEBUG: Decoded response = $response');
+        // Handle response yang mungkin [] atau {"data": [...]}
+        dynamic decoded = jsonDecode(raw is String ? raw : raw.toString());
+        print('DEBUG: Decoded response type = ${decoded.runtimeType}, value = $decoded');
         
-        final List<dynamic> list = response['data'] ?? [];
+        List<dynamic> list = [];
+        if (decoded is Map<String, dynamic>) {
+          list = decoded['data'] ?? [];
+        } else if (decoded is List) {
+          list = decoded;
+        }
+        
         print('DEBUG: Data list = $list');
         
         if (list.isEmpty) {
@@ -90,8 +97,16 @@ class _LoginScreenState extends State<LoginScreen> {
           picId,
         );
 
-        final Map<String, dynamic> response = jsonDecode(raw is String ? raw : raw.toString());
-        final List<dynamic> picList = response['data'] ?? [];
+        // Handle response yang mungkin [] atau {"data": [...]}
+        dynamic decoded = jsonDecode(raw is String ? raw : raw.toString());
+        
+        List<dynamic> picList = [];
+        if (decoded is Map<String, dynamic>) {
+          picList = decoded['data'] ?? [];
+        } else if (decoded is List) {
+          picList = decoded;
+        }
+        
         if (picList.isEmpty) {
           _showErrorDialog('ID PIC tidak ditemukan');
           if (mounted) setState(() => _isLoading = false);

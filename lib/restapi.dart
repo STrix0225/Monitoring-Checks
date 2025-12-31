@@ -2,7 +2,6 @@
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:intl/intl.dart';
 import 'config.dart' as ApiConfig;
 
 class DataService {
@@ -869,35 +868,20 @@ class DataService {
       }
    }
 
-    // Method untuk mengambil daily targets berdasarkan tanggal (client-side filter)
-    Future getDailyTargetsByDate(DateTime date) async {
-       String dateStr = DateFormat('yyyy-MM-dd').format(date);
+    // Method untuk mengambil semua daily targets tanpa filter tanggal
+    Future getDailyTargetsByDate([DateTime? date]) async {
        try {
           String response = await selectAll(
             ApiConfig.token,
             ApiConfig.project,
             'daily_target',
-             ApiConfig.appid,
+            ApiConfig.appid,
           );
 
           if (response == '[]' || response.isEmpty) return '{"data": []}';
 
-          var jsonData = jsonDecode(response);
-          final List<dynamic> allData = jsonData['data'] ?? [];
-
-          final filtered = allData.where((item) {
-             try {
-                final delivery = (item['delivery_date'] ?? '').toString();
-                if (delivery.isEmpty) return false;
-                final parsed = DateTime.parse(delivery);
-                final parsedStr = DateFormat('yyyy-MM-dd').format(parsed);
-                return parsedStr == dateStr;
-             } catch (e) {
-                return false;
-             }
-          }).toList();
-
-          return jsonEncode({'data': filtered});
+          // Return whatever the API returned (expected to be {"data": [...]})
+          return response;
        } catch (e) {
           return '{"data": []}';
        }

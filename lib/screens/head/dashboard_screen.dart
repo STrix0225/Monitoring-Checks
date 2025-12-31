@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'set_target_screen.dart';
+import 'pic_detail_screen.dart';
 import '../auth/login_screen.dart';
 
 class DashboardNgPage extends StatefulWidget {
@@ -29,7 +30,11 @@ class _DashboardNgPageState extends State<DashboardNgPage> with SingleTickerProv
   bool isLoadingTargets = false;
 
   DataService ds = DataService();
-  
+
+  // Search state for PIC list
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +55,7 @@ class _DashboardNgPageState extends State<DashboardNgPage> with SingleTickerProv
   void dispose() {
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -90,6 +96,17 @@ class _DashboardNgPageState extends State<DashboardNgPage> with SingleTickerProv
         );
       }
     }
+  }
+
+  void _filterPicList(String query) {
+    final q = query.trim().toLowerCase();
+    setState(() {
+      if (q.isEmpty) {
+        searchData = List.from(_picList);
+      } else {
+        searchData = _picList.where((p) => p.nama.toLowerCase().startsWith(q)).toList();
+      }
+    });
   }
 
   Future<void> _loadDailyTargets() async {
@@ -1056,17 +1073,49 @@ class _DashboardNgPageState extends State<DashboardNgPage> with SingleTickerProv
                 'Daftar Akun PIC',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              TextButton(
-                onPressed: () {},
-                child: const Text("Lihat Semua"),
+              IconButton(
+                icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.blue),
+                onPressed: () {
+                  setState(() {
+                    _isSearching = !_isSearching;
+                    if (!_isSearching) {
+                      _searchController.clear();
+                      searchData = List.from(_picList);
+                    }
+                  });
+                },
               )
             ],
           ),
         ),
+
+        // Search field
+        if (_isSearching)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: 'Cari nama PIC',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _filterPicList('');
+                  },
+                ),
+              ),
+              onChanged: (v) => _filterPicList(v),
+            ),
+          ),
+
+        const SizedBox(height: 8),
+
         Expanded(
           child: isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _picList.isEmpty
+              : searchData.isEmpty
                   ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1082,9 +1131,9 @@ class _DashboardNgPageState extends State<DashboardNgPage> with SingleTickerProv
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _picList.length,
+                      itemCount: searchData.length,
                       itemBuilder: (context, index) {
-                        final pic = _picList[index];
+                        final pic = searchData[index];
                         return _buildPicCard(pic);
                       },
                     ),
@@ -1212,71 +1261,82 @@ class _DashboardNgPageState extends State<DashboardNgPage> with SingleTickerProv
 
     final displayId = pic.id_pic.isNotEmpty ? pic.id_pic : pic.id;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Foto Profil (Avatar)
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: Colors.blue[50],
-            child: imageUrl.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Image.network(
-                      imageUrl,
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PicDetailScreen(pic: pic)),
+        ).then((_) {
+          // Refresh PIC list when returning from detail screen
+          _loadPicAccounts();
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Foto Profil (Avatar)
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: Colors.blue[50],
+              child: imageUrl.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.network(
+                        imageUrl,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Text(
+                      pic.nama.isNotEmpty ? pic.nama[0] : '-',
+                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18),
                     ),
-                  )
-                : Text(
-                    pic.nama.isNotEmpty ? pic.nama[0] : '-',
-                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-          ),
-          const SizedBox(width: 16),
-          
-          // Info PIC
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(pic.nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text("$displayId • ${pic.line}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                const SizedBox(height: 2),
-                Text("Password: ${pic.password}", style: const TextStyle(color: Colors.grey, fontSize: 10)),
-              ],
             ),
-          ),
-          
-          // Status Aktif
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green, width: 0.5),
-            ),
-            child: const Text(
-              "Aktif",
-              style: TextStyle(
-                color: Colors.green,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+            const SizedBox(width: 16),
+            
+            // Info PIC
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(pic.nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text("$displayId • ${pic.line}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 2),
+                  Text("Password: ${pic.password}", style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                ],
               ),
             ),
-          ),
-        ],
+            
+            // Status Aktif
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green, width: 0.5),
+              ),
+              child: const Text(
+                "Aktif",
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
