@@ -99,7 +99,7 @@ class DataService {
     }
    }
 
-   Future insertPicLine(String token, String project, String appid, String id_pic, String nama, String line, String password, String photo) async {
+   Future<dynamic> insertPicLine(String token, String project, String appid, String id_pic, String nama, String line, String password, String photo) async {
       String uri = 'https://api.247go.app/v5/insert/';
 
       try {
@@ -115,14 +115,21 @@ class DataService {
             'photo': photo
          });
 
+         final responseBody = response.body;
+         print('insertPicLine - HTTP ${response.statusCode} - body: $responseBody');
+
          if (response.statusCode == 200) {
-            return response.body;
+            try {
+               final decoded = jsonDecode(responseBody);
+               return decoded;
+            } catch (e) {
+               return responseBody;
+            }
          } else {
-            // Return an empty array
             return '[]';
          }
       } catch (e) {
-         // Print error here
+         print('insertPicLine error: $e');
          return '[]';
       }
    }
@@ -136,17 +143,16 @@ class DataService {
          if (response.statusCode == 200) {
             return response.body;
          } else {
-            // Return an empty array
             return '[]';
          }
       } catch (e) {
-         // Print error here
          return '[]';
       }
    }
 
    Future selectId(String token, String project, String collection, String appid, String id) async {
-      String uri = 'https://api.247go.app/v5/select_id/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/id/' + id;
+      String encodedId = Uri.encodeComponent(id);
+      String uri = 'https://api.247go.app/v5/select_id/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/id/' + encodedId;
 
       try {
          final response = await http.get(Uri.parse(uri));
@@ -154,29 +160,29 @@ class DataService {
          if (response.statusCode == 200) {
             return response.body;
          } else {
-            // Return an empty array
             return '[]';
          }
       } catch (e) {
-         // Print error here
          return '[]';
       }
    }
 
    Future selectWhere(String token, String project, String collection, String appid, String where_field, String where_value) async {
-      String uri = 'https://api.247go.app/v5/select_where/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/where_field/' + where_field + '/where_value/' + where_value;
+      final ef = Uri.encodeComponent(where_field);
+      final ev = Uri.encodeComponent(where_value);
+      String uri = 'https://api.247go.app/v5/select_where/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/where_field/' + ef + '/where_value/' + ev;
 
       try {
          final response = await http.get(Uri.parse(uri));
+         print('selectWhere -> GET $uri -> HTTP ${response.statusCode} -> body: ${response.body}');
 
          if (response.statusCode == 200) {
             return response.body;
          } else {
-            // Return an empty array
             return '[]';
          }
       } catch (e) {
-         // Print error here
+         print('selectWhere error for $uri : $e');
          return '[]';
       }
    }
@@ -190,11 +196,9 @@ class DataService {
          if (response.statusCode == 200) {
             return response.body;
          } else {
-            // Return an empty array
             return '[]';
          }
       } catch (e) {
-         // Print error here
          return '[]';
       }
    }
@@ -208,11 +212,9 @@ class DataService {
          if (response.statusCode == 200) {
             return response.body;
          } else {
-            // Return an empty array
             return '[]';
          }
       } catch (e) {
-         // Print error here
          return '[]';
       }
    }
@@ -226,11 +228,9 @@ class DataService {
          if (response.statusCode == 200) {
             return response.body;
          } else {
-            // Return an empty array
             return '[]';
          }
       } catch (e) {
-         // Print error here
          return '[]';
       }
    }
@@ -244,133 +244,129 @@ class DataService {
          if (response.statusCode == 200) {
             return response.body;
          } else {
-            // Return an empty array
             return '[]';
          }
       } catch (e) {
-         // Print error here
          return '[]';
       }
    }
 
-   Future removeAll(String token, String project, String collection, String appid) async {
-      String uri = 'https://api.247go.app/v5/remove_all/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid;
+Future<bool> removeAll(String token, String project, String collection, String appid) async {
+    String uri = 'https://api.247go.app/v5/remove_all/token/$token/project/$project/collection/$collection/appid/$appid';
 
-      try {
-         final response = await http.delete(Uri.parse(uri));
+    try {
+      final response = await http.delete(Uri.parse(uri));
 
-         if (response.statusCode == 200) {
-            return true;
-         } else {
-            return false;
-         }
-      } catch (e) {
-         // Print error here
-         return false;
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
       }
-   }
+    } catch (e) {
+      return false;
+    }
+  }
 
-   Future removeId(String token, String project, String collection, String appid, String id) async {
-      String uri = 'https://api.247go.app/v5/remove_id/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/id/' + id;
+ Future<bool> removeId(String token, String project, String collection, String appid, String id) async {
+  final uri = Uri.parse(
+    'https://api.247go.app/v5/remove_id/token/$token/project/$project/collection/$collection/appid/$appid/id/$id',
+  );
 
-      try {
-         final response = await http.delete(Uri.parse(uri));
+  try {
+    final response = await http.get(uri); 
+    print('Response: ${response.body}');
+    if (response.statusCode == 200) {
+      final result = jsonDecode(response.body);
+      return result['status'] == '1';
+    } else {
+      return false;
+    }
+  } catch (e) {
+    print('Error removeId: $e');
+    return false;
+  }
+}
 
-         if (response.statusCode == 200) {
-            return true;
-         } else {
-            return false;
-         }
-      } catch (e) {
-         // Print error here
-         return false;
+
+  Future<bool> removeWhere(String token, String project, String collection, String appid, String whereField, String whereValue) async {
+    String uri = 'https://api.247go.app/v5/remove_where/token/$token/project/$project/collection/$collection/appid/$appid/where_field/$whereField/where_value/$whereValue';
+
+    try {
+      final response = await http.delete(Uri.parse(uri));
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
       }
-   }
+    } catch (e) {
+      return false;
+    }
+  }
 
-   Future removeWhere(String token, String project, String collection, String appid, String where_field, String where_value) async {
-      String uri = 'https://api.247go.app/v5/remove_where/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/where_field/' + where_field + '/where_value/' + where_value;
+  Future<bool> removeOrWhere(String token, String project, String collection, String appid, String orWhereField, String orWhereValue) async {
+    String uri = 'https://api.247go.app/v5/remove_or_where/token/$token/project/$project/collection/$collection/appid/$appid/or_where_field/$orWhereField/or_where_value/$orWhereValue';
 
-      try {
-         final response = await http.delete(Uri.parse(uri));
+    try {
+      final response = await http.delete(Uri.parse(uri));
 
-         if (response.statusCode == 200) {
-            return true;
-         } else {
-            return false;
-         }
-      } catch (e) {
-         // Print error here
-         return false;
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
       }
-   }
+    } catch (e) {
+      return false;
+    }
+  }
 
-   Future removeOrWhere(String token, String project, String collection, String appid, String or_where_field, String or_where_value) async {
-      String uri = 'https://api.247go.app/v5/remove_or_where/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/or_where_field/' + or_where_field + '/or_where_value/' + or_where_value;
+  Future<bool> removeWhereLike(String token, String project, String collection, String appid, String wlikeField, String wlikeValue) async {
+    String uri = 'https://api.247go.app/v5/remove_where_like/token/$token/project/$project/collection/$collection/appid/$appid/wlike_field/$wlikeField/wlike_value/$wlikeValue';
 
-      try {
-         final response = await http.delete(Uri.parse(uri));
+    try {
+      final response = await http.delete(Uri.parse(uri));
 
-         if (response.statusCode == 200) {
-            return true;
-         } else {
-            return false;
-         }
-      } catch (e) {
-         // Print error here
-         return false;
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
       }
-   }
+    } catch (e) {
+      return false;
+    }
+  }
 
-   Future removeWhereLike(String token, String project, String collection, String appid, String wlike_field, String wlike_value) async {
-      String uri = 'https://api.247go.app/v5/remove_where_like/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/wlike_field/' + wlike_field + '/wlike_value/' + wlike_value;
+  Future<bool> removeWhereIn(String token, String project, String collection, String appid, String winField, String winValue) async {
+    String uri = 'https://api.247go.app/v5/remove_where_in/token/$token/project/$project/collection/$collection/appid/$appid/win_field/$winField/win_value/$winValue';
 
-      try {
-         final response = await http.delete(Uri.parse(uri));
+    try {
+      final response = await http.delete(Uri.parse(uri));
 
-         if (response.statusCode == 200) {
-            return true;
-         } else {
-            return false;
-         }
-      } catch (e) {
-         // Print error here
-         return false;
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
       }
-   }
+    } catch (e) {
+      return false;
+    }
+  }
 
-   Future removeWhereIn(String token, String project, String collection, String appid, String win_field, String win_value) async {
-      String uri = 'https://api.247go.app/v5/remove_where_in/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/win_field/' + win_field + '/win_value/' + win_value;
+  Future<bool> removeWhereNotIn(String token, String project, String collection, String appid, String wnotinField, String wnotinValue) async {
+    String uri = 'https://api.247go.app/v5/remove_where_not_in/token/$token/project/$project/collection/$collection/appid/$appid/wnotin_field/$wnotinField/wnotin_value/$wnotinValue';
 
-      try {
-         final response = await http.delete(Uri.parse(uri));
+    try {
+      final response = await http.delete(Uri.parse(uri));
 
-         if (response.statusCode == 200) {
-            return true;
-         } else {
-            return false;
-         }
-      } catch (e) {
-         // Print error here
-         return false;
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
       }
-   }
-
-   Future removeWhereNotIn(String token, String project, String collection, String appid, String wnotin_field, String wnotin_value) async {
-      String uri = 'https://api.247go.app/v5/remove_where_not_in/token/' + token + '/project/' + project + '/collection/' + collection + '/appid/' + appid + '/wnotin_field/' + wnotin_field + '/wnotin_value/' + wnotin_value;
-
-      try {
-         final response = await http.delete(Uri.parse(uri));
-
-         if (response.statusCode == 200) {
-            return true;
-         } else {
-            return false;
-         }
-      } catch (e) {
-         // Print error here
-         return false;
-      }
-   }
+    } catch (e) {
+      return false;
+    }
+  }
 
    Future updateAll(String update_field, String update_value, String token, String project, String collection, String appid) async {
       String uri = 'https://api.247go.app/v5/update_all/';
@@ -443,7 +439,6 @@ class DataService {
          return false;
       }
    }
-
    Future updateOrWhere(String or_where_field, String or_where_value, String update_field, String update_value, String token, String project, String collection, String appid) async {
       String uri = 'https://api.247go.app/v5/update_or_where/';
 

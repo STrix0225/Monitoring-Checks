@@ -1,3 +1,4 @@
+// (Hanya bagian file dashboard_screen.dart saya perbarui — saya sertakan seluruh file untuk kenyamanan)
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../restapi.dart';
@@ -543,9 +544,78 @@ class _DashboardNgPageState extends State<DashboardNgPage> with SingleTickerProv
                       dialogSetState(() { isLoading = false; });
 
                       if (result != null) {
+                        // Extract inserted id from variety of possible response shapes
+                        String extractedId = '';
+                        try {
+                          if (result is Map) {
+                            // check common locations for inserted id
+                            if (result.containsKey('_id')) {
+                              extractedId = (result['_id'] ?? '').toString();
+                            } else if (result.containsKey('id')) {
+                              extractedId = (result['id'] ?? '').toString();
+                            } else if (result.containsKey('insertedId')) {
+                              extractedId = (result['insertedId'] ?? '').toString();
+                            } else if (result.containsKey('data')) {
+                              final d = result['data'];
+                              if (d is Map && (d.containsKey('_id') || d.containsKey('id'))) {
+                                extractedId = (d['_id'] ?? d['id'] ?? '').toString();
+                              } else if (d is List && d.isNotEmpty) {
+                                final first = d[0];
+                                if (first is Map) {
+                                  extractedId = (first['_id'] ?? first['id'] ?? '').toString();
+                                }
+                              }
+                            } else {
+                              // try to search nested map fields
+                              result.forEach((k, v) {
+                                if (extractedId.isEmpty && v is String && (k == '_id' || k == 'id')) extractedId = v;
+                                if (extractedId.isEmpty && v is Map) {
+                                  if (v.containsKey('_id')) extractedId = (v['_id'] ?? '').toString();
+                                  if (extractedId.isEmpty && v.containsKey('id')) extractedId = (v['id'] ?? '').toString();
+                                }
+                              });
+                            }
+                          } else if (result is List) {
+                            if (result.isNotEmpty) {
+                              final first = result[0];
+                              if (first is Map) {
+                                extractedId = (first['_id'] ?? first['id'] ?? '').toString();
+                              } else if (first is String) {
+                                extractedId = first;
+                              }
+                            }
+                          } else if (result is String) {
+                            // try decode string to json
+                            try {
+                              final parsed = jsonDecode(result);
+                              if (parsed is Map) {
+                                extractedId = (parsed['_id'] ?? parsed['id'] ?? parsed['insertedId'] ?? '').toString();
+                                if (extractedId.isEmpty && parsed.containsKey('data')) {
+                                  final d = parsed['data'];
+                                  if (d is List && d.isNotEmpty && d[0] is Map) {
+                                    extractedId = (d[0]['_id'] ?? d[0]['id'] ?? '').toString();
+                                  } else if (d is Map) {
+                                    extractedId = (d['_id'] ?? d['id'] ?? '').toString();
+                                  }
+                                }
+                              } else if (parsed is List && parsed.isNotEmpty) {
+                                final first = parsed[0];
+                                if (first is Map) extractedId = (first['_id'] ?? first['id'] ?? '').toString();
+                                else if (first is String) extractedId = first;
+                              }
+                            } catch (_) {
+                              // not JSON, could be plain inserted id string
+                              extractedId = result;
+                            }
+                          }
+                        } catch (e) {
+                          print('Error extracting inserted id: $e');
+                        }
+
+                        // Use extractedId if available; otherwise id field remains empty
                         setState(() {
                           _picList.add(PicLineModel(
-                            id: '',
+                            id: extractedId,
                             id_pic: _idController.text,
                             nama: _nameController.text,
                             line: _selectedLine!,

@@ -41,36 +41,77 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, dialogSetState) {
-        return AlertDialog(
+          return AlertDialog(
             title: const Text('Edit Akun PIC'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Foto Profil dengan border
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.blue, width: 2),
+                      color: Colors.blue[50],
+                    ),
+                    child: Center(
+                      child: Text(
+                        _pic.nama.isNotEmpty 
+                            ? _pic.nama[0].toUpperCase() 
+                            : '-',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
                   TextField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Nama PIC',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      prefixIcon: const Icon(Icons.person, color: Colors.blue),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
                   ),
                   const SizedBox(height: 16),
+                  
                   TextField(
                     controller: _idController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'ID PIC',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.badge),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      prefixIcon: const Icon(Icons.badge, color: Colors.blue),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
                   ),
                   const SizedBox(height: 16),
+                  
                   DropdownButtonFormField<String>(
                     value: _selectedLine,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Line/Kategori',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.category),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      prefixIcon: const Icon(Icons.category, color: Colors.blue),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
                     items: _lineOptions.map((String value) {
                       return DropdownMenuItem<String>(
@@ -85,13 +126,24 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
+                  
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Password',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.lock),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      prefixIcon: const Icon(Icons.lock, color: Colors.blue),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.visibility),
+                        onPressed: () {
+                          // Toggle password visibility
+                        },
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
                   ),
                 ],
@@ -100,6 +152,9 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[700],
+                ),
                 child: const Text('BATAL'),
               ),
               ElevatedButton(
@@ -130,7 +185,6 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
                     );
 
                     if (success) {
-                      // Update lainnya jika diperlukan
                       setState(() {
                         _pic = PicLineModel(
                           id: _pic.id,
@@ -147,6 +201,7 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
                         const SnackBar(
                           content: Text('Akun PIC berhasil diperbarui'),
                           backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
                         ),
                       );
                     } else {
@@ -154,6 +209,7 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
                         const SnackBar(
                           content: Text('Gagal memperbarui akun PIC'),
                           backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
                         ),
                       );
                     }
@@ -162,14 +218,19 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
                       SnackBar(
                         content: Text('Error: $e'),
                         backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
                       ),
                     );
                   }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                child: const Text('SIMPAN'),
+                child: const Text('SIMPAN PERUBAHAN'),
               ),
             ],
           );
@@ -182,21 +243,74 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Hapus'),
-        content: Text('Apakah Anda yakin ingin menghapus akun PIC "${_pic.nama}"?'),
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Konfirmasi Hapus'),
+          ],
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.delete_forever,
+              size: 60,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Apakah Anda yakin ingin menghapus akun PIC?',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '"${_pic.nama}" (${_pic.id_pic})',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tindakan ini tidak dapat dibatalkan.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+            ),
             child: const Text('BATAL'),
           ),
           ElevatedButton(
             onPressed: () async {
+              Navigator.pop(context);
               await _deletePic(_pic.id);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: const Text('HAPUS'),
+            child: const Text('HAPUS AKUN'),
           ),
         ],
       ),
@@ -222,29 +336,33 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
         isLoading = false;
       });
 
-      // Tutup dialog confirmation
-      Navigator.pop(context);
-
       if (deleteSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Akun PIC berhasil dihapus!'),
+          SnackBar(
+            content: const Text('Akun PIC berhasil dihapus!'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
         
-        // Tunggu sebentar sebelum kembali
         await Future.delayed(const Duration(milliseconds: 1500));
         
         if (!mounted) return;
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal menghapus akun PIC'),
+          SnackBar(
+            content: const Text('Gagal menghapus akun PIC'),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -262,9 +380,44 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
           content: Text('Error saat menghapus: $e'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
+  }
+
+  Widget _buildInfoRow(String label, String value, {bool isPassword = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF666666),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              isPassword ? '••••••••' : value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -273,176 +426,205 @@ class _PicDetailScreenState extends State<PicDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Detail Akun PIC',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          'Detail Akun PIC',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit, color: Colors.blue),
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.edit, color: Colors.blue, size: 20),
+            ),
             tooltip: 'Edit',
             onPressed: _showEditDialog,
           ),
           IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.delete, color: Colors.red, size: 20),
+            ),
             tooltip: 'Hapus',
             onPressed: _showDeleteDialog,
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Avatar & Basic Info
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.blue[50],
-                      child: Text(
-                        _pic.nama.isNotEmpty ? _pic.nama[0].toUpperCase() : '-',
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
-                      ),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // Profile Section
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Avatar
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.blue[50],
+                              border: Border.all(color: Colors.blue, width: 2),
+                            ),
+                            child: Center(
+                              child: Text(
+                                _pic.nama.isNotEmpty 
+                                    ? _pic.nama[0].toUpperCase() 
+                                    : '?',
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Name
                           Text(
                             _pic.nama,
                             style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          
+                          // Specialization/Line
                           Text(
-                            _pic.id_pic,
+                            _pic.line,
                             style: const TextStyle(
                               fontSize: 14,
-                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF666666),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          // ID Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[50],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _pic.id_pic,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ),
+                          
+                          // Status Badge
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.green),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'AKTIF',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Detail Fields
-            const Text(
-              'Informasi Akun',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ID PIC
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'ID PIC',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _pic.id_pic,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Information Section
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Section Title
+                          const Text(
+                            'Informasi Akun',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            height: 2,
+                            width: 50,
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Information Rows
+                          _buildInfoRow('ID PIC', _pic.id_pic),
+                          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                          _buildInfoRow('Line / Kategori', _pic.line),
+                          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                          _buildInfoRow('Password', _pic.password, isPassword: true),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-
-            // Line
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Line / Kategori',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _pic.line,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Password
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Password',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _pic.password,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
