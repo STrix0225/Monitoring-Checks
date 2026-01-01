@@ -15,28 +15,9 @@ class PicDashboardScreen extends StatefulWidget {
 }
 
 class _PicDashboardScreenState extends State<PicDashboardScreen> {
-  // Data Pekerjaan PIC (Disederhanakan ke Target Harian)
+  // Data Pekerjaan PIC (Kosong karena akan diisi dari API/backend)
   final Map<String, List<Map<String, dynamic>>> _categoryProducts = {
-    'Body Parts': [
-      {
-        'id': 'BP001',
-        'name': 'Front pillar upper outer',
-        'customer': 'PT Daihatsu',
-        'dailyTarget': 200, // Target hari ini
-        'completed': 180,   // Sudah jadi
-        'deadline': 'Hari Ini, 16:00', 
-        'isUrgent': true,   // Karena deadline mepet
-      },
-      {
-        'id': 'BP002',
-        'name': 'Front pillar lower outer',
-        'customer': 'PT Toyota',
-        'dailyTarget': 300,
-        'completed': 50,    // Masih sedikit
-        'deadline': 'Besok, 08:00',
-        'isUrgent': false,
-      },
-    ],
+    'Body Parts': [],
   };
 
   @override
@@ -90,16 +71,18 @@ class _PicDashboardScreenState extends State<PicDashboardScreen> {
             
             const SizedBox(height: 24),
             
-            const Row(
-              children: [
-                Icon(Icons.checklist, color: Colors.blue),
-                SizedBox(width: 8),
-                Text('TARGET PRODUKSI HARI INI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 16),
+            // List Tugas / Produk (hanya ditampilkan jika ada data)
+            if (products.isNotEmpty) ...[
+              const Row(
+                children: [
+                  Icon(Icons.checklist, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text('TARGET PRODUKSI HARI INI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
             
-            // List Tugas / Produk
             Column(
               children: products.map((product) {
                 double progress = product['completed'] / product['dailyTarget'];
@@ -153,6 +136,39 @@ class _PicDashboardScreenState extends State<PicDashboardScreen> {
                 );
               }).toList(),
             ),
+            
+            // Tampilan ketika tidak ada data
+            if (products.isEmpty)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 50),
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 80,
+                      color: Colors.grey[300],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Tidak ada target produksi hari ini',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Silakan hubungi supervisor untuk informasi lebih lanjut',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[400],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

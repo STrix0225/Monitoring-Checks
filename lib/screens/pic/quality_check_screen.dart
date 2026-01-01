@@ -1,144 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // Import untuk kIsWeb
+import 'dart:convert';
+import 'package:monitoringng1/restapi.dart';
+import 'package:monitoringng1/models/daily_target_model.dart';
 
-class QualityCheckScreen extends StatefulWidget {
-  final Map<String, dynamic> product;
+class QualityCheckScreenV2 extends StatefulWidget {
+  final DailyTargetModel target;
   final String picId;
 
-  const QualityCheckScreen({
+  const QualityCheckScreenV2({
     super.key,
-    required this.product,
+    required this.target,
     required this.picId,
   });
 
   @override
-  State<QualityCheckScreen> createState() => _QualityCheckScreenState();
+  State<QualityCheckScreenV2> createState() => _QualityCheckScreenV2State();
 }
 
-class _QualityCheckScreenState extends State<QualityCheckScreen> {
-  final Map<String, dynamic> _checkResults = {};
-  final Map<String, List<XFile>> _ngImages = {};
-  bool _isSubmitting = false;
+class _QualityCheckScreenV2State extends State<QualityCheckScreenV2> {
+  final DataService _dataService = DataServiceV2();
   final ImagePicker _imagePicker = ImagePicker();
   
-  // Data kategori dan produk
-  final Map<String, List<String>> _categoryProducts = {
-    'Body parts': [
-      'Front pillar upper outer',
-      'Front pillar lower outer',
-      'Cowl assembly',
-      'Wheel house inner/outer subassembly',
-      'Rear floor side member subassembly',
-    ],
-    'Interior parts': [
-      'Instrument panel reinforcement',
-    ],
-    'Exhaust system parts': [
-      'Exhaust system',
-      'Exhaust manifold',
-      'Diesel exhaust gas post-treatment device',
-    ],
-    'Suspension parts': [
-      'Front suspension sub-frame',
-      'Trailing arm',
-      'Rear axle beam',
-      'Engine undercover',
-    ],
-    'Fuel system parts': [
-      'Canister',
-      'Fuel inlet pipe',
-    ],
-  };
+  List<Map<String, dynamic>> _parameters = [];
+  Map<String, dynamic> _checkResults = {};
+  Map<String, List<XFile>> _ngImages = {};
+  Map<String, TextEditingController> _ngReasonControllers = {};
+  Map<String, String> _actualValues = {};
   
-  String? _selectedCategory;
-  String? _selectedProduct;
-  List<String> _availableProducts = [];
-  
-  final List<Map<String, String>> _defaultQualityItems = [
-    {'name': 'Ketebalan', 'standard': '3.0 mm'},
-    {'name': 'Penyok', 'standard': 'Tidak ada'},
-    {'name': 'Diameter lubang', 'standard': '12.5 mm'},
-    {'name': 'Panjang', 'standard': '450 mm'},
-    {'name': 'Sudut potong', 'standard': '45°'},
-  ];
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+  String _overallStatus = 'OK';
+  final TextEditingController _notesController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    for (var item in _defaultQualityItems) {
-      _checkResults[item['name']!] = {
-        'value': '',
-        'passed': true,
-        'type': _determineItemType(item['name']!),
-      };
-      _ngImages[item['name']!] = [];
-    }
+    _loadQualityParameters();
+  }
+
+  Future<void> _loadQualityParameters() async {
+    setState(() => _isLoading = true);
     
-    if (widget.product.isNotEmpty) {
-      final productName = widget.product['name'] ?? widget.product['nama'] ?? '';
-      if (productName.isNotEmpty) {
-        for (var category in _categoryProducts.keys) {
-          if (_categoryProducts[category]!.contains(productName)) {
-            setState(() {
-              _selectedCategory = category;
-              _availableProducts = _categoryProducts[category]!;
-              _selectedProduct = productName;
-            });
-            break;
+    try {
+      final response = await _dataService.getQualityParameters(
+        widget.target.category,
+        widget.target.product,
+      );
+      
+      final data = jsonDecode(response);
+      
+      if (data['data'] != null && data['data']['parameters'] != null) {
+        setState(() {
+          _parameters = List<Map<String, dynamic>>.from(data['data']['parameters']);
+          
+          // Initialize check results
+          for (var param in _parameters) {
+            final paramName = param['name'];
+            _checkResults[paramName] = {
+              'passed': true,
+              'type': param['type'] ?? 'boolean',
+            };
+            
+            // Initialize NG image list
+            _ngImages[paramName] = [];
+            
+            // Initialize NG reason controller
+            _ngReasonControllers[paramName] = TextEditingController();
+            
+            // Initialize actual value if numeric type
+            if ((param['type'] ?? 'boolean') == 'numeric') {
+              _actualValues[paramName] = '';
+            }
           }
-        }
+        });
       }
+    } catch (e) {
+      print('Error loading quality parameters: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
-  
-  String _determineItemType(String itemName) {
-    if (itemName.toLowerCase().contains('ketebalan') || 
-        itemName.toLowerCase().contains('diameter') ||
-        itemName.toLowerCase().contains('panjang') ||
-        itemName.toLowerCase().contains('sudut')) {
-      return 'numeric';
-    }
-    return 'boolean'; 
-  }
 
-  void _updateAvailableProducts(String? category) {
-    setState(() {
-      _selectedCategory = category;
-      _availableProducts = category != null 
-          ? _categoryProducts[category] ?? []
-          : [];
-      _selectedProduct = null;
-    });
-  }
-
-  Future<void> _takePhotoFromCamera(String itemName) async {
+  Future<void> _takePhoto(String paramName) async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
         maxWidth: 800,
-        preferredCameraDevice: CameraDevice.rear,
       );
       
       if (photo != null && mounted) {
         setState(() {
-          _ngImages[itemName]!.add(photo);
+          _ngImages[paramName]!.add(photo);
         });
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto berhasil diambil dari kamera')),
+          const SnackBar(
+            content: Text('Foto berhasil diambil'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
-      print('Error mengambil foto dari kamera: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengambil foto: ${e.toString()}')),
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
-  Future<void> _pickPhotoFromGallery(String itemName) async {
+  Future<void> _pickPhoto(String paramName) async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -148,78 +124,432 @@ class _QualityCheckScreenState extends State<QualityCheckScreen> {
       
       if (photo != null && mounted) {
         setState(() {
-          _ngImages[itemName]!.add(photo);
+          _ngImages[paramName]!.add(photo);
         });
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto berhasil dipilih dari galeri')),
+          const SnackBar(
+            content: Text('Foto berhasil dipilih'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
-      print('Error memilih foto dari galeri: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memilih foto: ${e.toString()}')),
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
-  void _showImageSourceDialog(String itemName) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pilih Sumber Gambar'),
-        content: const Text('Pilih sumber untuk mengambil gambar bukti:'),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _takePhotoFromCamera(itemName);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
+  Future<List<String>> _uploadNgPhotos(List<XFile> photos) async {
+    List<String> uploadedFileNames = [];
+    
+    for (var photo in photos) {
+      try {
+        final fileBytes = await photo.readAsBytes();
+        final fileName = await _dataService.uploadPhotoForNg(
+          fileBytes,
+          photo.path.split('.').last,
+        );
+        
+        uploadedFileNames.add(fileName);
+      } catch (e) {
+        print('Error uploading photo: $e');
+      }
+    }
+    
+    return uploadedFileNames;
+  }
+
+  Future<void> _submitQualityCheck() async {
+    // Validasi
+    bool hasNg = _checkResults.values.any((result) => !result['passed']);
+    
+    if (hasNg) {
+      // Validasi untuk parameter NG
+      for (var param in _parameters) {
+        final paramName = param['name'];
+        if (!_checkResults[paramName]!['passed']) {
+          // Cek apakah ada foto untuk parameter NG
+          if (_ngImages[paramName]!.isEmpty) {
+            _showError('Foto wajib diupload untuk parameter NG: $paramName');
+            return;
+          }
+          
+          // Cek apakah ada alasan NG
+          if (_ngReasonControllers[paramName]!.text.isEmpty) {
+            _showError('Alasan NG wajib diisi untuk parameter: $paramName');
+            return;
+          }
+        }
+      }
+    }
+    
+    setState(() => _isSubmitting = true);
+    
+    try {
+      // 1. Upload foto-foto NG
+      List<String> allPhotoUrls = [];
+      List<String> ngReasons = [];
+      
+      for (var param in _parameters) {
+        final paramName = param['name'];
+        
+        if (!_checkResults[paramName]!['passed']) {
+          // Upload foto untuk parameter ini
+          final photoUrls = await _uploadNgPhotos(_ngImages[paramName]!);
+          allPhotoUrls.addAll(photoUrls);
+          
+          // Tambahkan alasan NG
+          ngReasons.add('${paramName}: ${_ngReasonControllers[paramName]!.text}');
+        }
+      }
+      
+      // 2. Prepare parameters data
+      List<Map<String, dynamic>> parametersData = [];
+      
+      for (var param in _parameters) {
+        final paramName = param['name'];
+        final paramType = param['type'] ?? 'boolean';
+        
+        Map<String, dynamic> paramData = {
+          'name': paramName,
+          'standard': param['standard'] ?? '',
+          'passed': _checkResults[paramName]!['passed'],
+        };
+        
+        if (paramType == 'numeric') {
+          paramData['actual'] = _actualValues[paramName] ?? '';
+          paramData['unit'] = param['unit'] ?? '';
+        }
+        
+        parametersData.add(paramData);
+      }
+      
+      // 3. Tentukan overall status
+      final overallStatus = hasNg ? 'NG' : 'OK';
+      
+      // 4. Insert ke database
+      final result = await _dataService.insertQualityResult(
+        targetId: widget.target.id ?? '',
+        picId: widget.picId,
+        productName: widget.target.product,
+        category: widget.target.category,
+        customer: widget.target.customer,
+        status: overallStatus,
+        parameters: parametersData,
+        ngReasons: ngReasons,
+        photos: allPhotoUrls,
+        notes: _notesController.text,
+      );
+      
+      if (result != '[]') {
+        _showSuccess('Quality Check berhasil disimpan!');
+        Navigator.pop(context);
+      } else {
+        _showError('Gagal menyimpan Quality Check');
+      }
+    } catch (e) {
+      print('Error submitting QC: $e');
+      _showError('Error: ${e.toString()}');
+    } finally {
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  Widget _buildParameterItem(Map<String, dynamic> param) {
+    final paramName = param['name'];
+    final standard = param['standard'] ?? '';
+    final paramType = param['type'] ?? 'boolean';
+    final isPassed = _checkResults[paramName]!['passed'];
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.camera_alt),
-                SizedBox(width: 8),
-                Text('Kamera'),
+                Text(
+                  paramName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Std: $standard',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
               ],
             ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _pickPhotoFromGallery(itemName);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
+            
+            const SizedBox(height: 12),
+            
+            // Input field berdasarkan tipe
+            if (paramType == 'numeric')
+              _buildNumericField(paramName, param)
+            else if (paramType == 'text')
+              _buildTextField(paramName)
+            else
+              const SizedBox(), // Boolean hanya menggunakan toggle
+            
+            const SizedBox(height: 12),
+            
+            // Status toggle
+            Row(
               children: [
-                Icon(Icons.photo_library),
-                SizedBox(width: 8),
-                Text('Galeri'),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _checkResults[paramName]!['passed'] = true;
+                      });
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isPassed ? Colors.green : Colors.grey,
+                      side: BorderSide(
+                        color: isPassed ? Colors.green : Colors.grey,
+                      ),
+                      backgroundColor: isPassed ? Colors.green[50] : null,
+                    ),
+                    child: const Text('OK'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _checkResults[paramName]!['passed'] = false;
+                      });
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: !isPassed ? Colors.red : Colors.grey,
+                      side: BorderSide(
+                        color: !isPassed ? Colors.red : Colors.grey,
+                      ),
+                      backgroundColor: !isPassed ? Colors.red[50] : null,
+                    ),
+                    child: const Text('NG'),
+                  ),
+                ),
               ],
             ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('BATAL'),
-          ),
-        ],
+            
+            // NG Details jika status NG
+            if (!isPassed) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[100]),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'DETAIL BARANG NG',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    // Alasan NG
+                    TextField(
+                      controller: _ngReasonControllers[paramName],
+                      decoration: const InputDecoration(
+                        labelText: 'Alasan NG (Detail kerusakan)',
+                        border: OutlineInputBorder(),
+                        hintText: 'Contoh: Penyok di bagian cylinder sebesar 5mm',
+                      ),
+                      maxLines: 2,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Upload Foto
+                    _buildPhotoUploadSection(paramName),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  void _removeImage(String itemName, int index) {
-    setState(() {
-      _ngImages[itemName]!.removeAt(index);
-    });
+  Widget _buildNumericField(String paramName, Map<String, dynamic> param) {
+    return TextField(
+      keyboardType: TextInputType.number,
+      onChanged: (value) {
+        setState(() {
+          _actualValues[paramName] = value;
+        });
+      },
+      decoration: InputDecoration(
+        labelText: 'Nilai Aktual (${param['unit'] ?? ''})',
+        border: const OutlineInputBorder(),
+        hintText: 'Masukkan nilai pengukuran',
+      ),
+    );
+  }
+
+  Widget _buildTextField(String paramName) {
+    return TextField(
+      onChanged: (value) {
+        setState(() {
+          _actualValues[paramName] = value;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Keterangan',
+        border: OutlineInputBorder(),
+      ),
+    );
+  }
+
+  Widget _buildPhotoUploadSection(String paramName) {
+    final photos = _ngImages[paramName]!;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Foto Bukti NG (Wajib):',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        
+        if (photos.isNotEmpty)
+          SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: photos.length,
+              itemBuilder: (context, index) {
+                return Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(photos[index].path),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(Icons.error, color: Colors.red),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            photos.removeAt(index);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        
+        const SizedBox(height: 16),
+        
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _takePhoto(paramName),
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Ambil Foto'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _pickPhoto(paramName),
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Pilih dari Galeri'),
+              ),
+            ),
+          ],
+        ),
+        
+        if (photos.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              '⚠️ Minimal 1 foto wajib diupload',
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Gambar berhasil dihapus')),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
     );
   }
 
@@ -227,415 +557,114 @@ class _QualityCheckScreenState extends State<QualityCheckScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Form Quality Check'),
+        title: const Text('Quality Check'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              color: Colors.blue[50],
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    const Icon(Icons.person, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('PIC: ${widget.picId}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text('Tanggal: ${DateTime.now().toString().substring(0, 10)}'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            const Text('DATA PRODUK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 10),
-            
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    DropdownButtonFormField<String>(
-                      value: _selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: 'Kategori Produk',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.category),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Info
+                  Card(
+                    color: Colors.blue[50],
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.person, color: Colors.blue),
+                              const SizedBox(width: 8),
+                              Text(
+                                'PIC: ${widget.picId}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text('Produk: ${widget.target.product}'),
+                          Text('Customer: ${widget.target.customer}'),
+                          Text('Kategori: ${widget.target.category}'),
+                        ],
                       ),
-                      items: _categoryProducts.keys.map((String category) {
-                        return DropdownMenuItem<String>(
-                          value: category,
-                          child: Text(category),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        _updateAvailableProducts(value);
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Pilih kategori produk';
-                        }
-                        return null;
-                      },
                     ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    DropdownButtonFormField<String>(
-                      value: _selectedProduct,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Produk',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.inventory_2),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Parameters List
+                  const Text(
+                    'PARAMETER QUALITY CHECK',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  ..._parameters.map(_buildParameterItem).toList(),
+                  
+                  // Notes
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Catatan Tambahan',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _notesController,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              hintText: 'Masukkan catatan tambahan jika ada...',
+                            ),
+                          ),
+                        ],
                       ),
-                      items: _availableProducts.map((String product) {
-                        return DropdownMenuItem<String>(
-                          value: product,
-                          child: Text(product),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedProduct = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Pilih produk';
-                        }
-                        return null;
-                      },
-                      disabledHint: _selectedCategory == null 
-                          ? const Text('Pilih kategori terlebih dahulu')
-                          : null,
                     ),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            const Text('ITEM PEMERIKSAAN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 10),
-
-            ..._defaultQualityItems.map<Widget>((item) {
-              return _buildCheckItem(item['name']!, item['standard']!);
-            }).toList(),
-            
-            const SizedBox(height: 24),
-    
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitCheck,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: _isSubmitting
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('SIMPAN HASIL QC', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCheckItem(String itemName, String standardValue) {
-    final result = _checkResults[itemName];
-    final type = result?['type'] ?? 'text';
-    final images = _ngImages[itemName] ?? [];
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(itemName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
-                  child: Text('Std: $standardValue', style: const TextStyle(fontSize: 12)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (type == 'numeric') 
-               _buildNumericInput(itemName),
-            
-            const SizedBox(height: 12),
-            _buildStatusToggle(itemName, images),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNumericInput(String itemName) {
-    return TextField(
-      keyboardType: TextInputType.number,
-      decoration: const InputDecoration(
-        labelText: 'Nilai Aktual (mm/deg)',
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
-      onChanged: (value) {
-        setState(() {
-          _checkResults[itemName] = {
-            ..._checkResults[itemName]!,
-            'value': value,
-          };
-        });
-      },
-    );
-  }
-
-  Widget _buildStatusToggle(String itemName, List<XFile> images) {
-    final result = _checkResults[itemName];
-    final bool isPassed = result?['passed'] ?? true;
-
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _checkResults[itemName] = {..._checkResults[itemName]!, 'passed': true}),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isPassed ? Colors.green[100] : Colors.grey[100],
-                    border: Border.all(color: isPassed ? Colors.green : Colors.transparent),
-                    borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Center(
-                    child: Text('OK / Lulus', 
-                      style: TextStyle(color: isPassed ? Colors.green[800] : Colors.grey, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-               child: GestureDetector(
-                onTap: () => setState(() => _checkResults[itemName] = {..._checkResults[itemName]!, 'passed': false}),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: !isPassed ? Colors.red[100] : Colors.grey[100],
-                    border: Border.all(color: !isPassed ? Colors.red : Colors.transparent),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Center(
-                    child: Text('NG / Cacat', 
-                      style: TextStyle(color: !isPassed ? Colors.red[800] : Colors.grey, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        
-        if (!isPassed) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.red[50],
-              border: Border.all(color: Colors.red[200]!),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.warning, color: Colors.red, size: 16),
-                    SizedBox(width: 4),
-                    Text(
-                      'Bukti Foto Wajib Diisi!',
-                      style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                
-                if (images.isNotEmpty)
-                  Column(
-                    children: [
-                      const Text(
-                        'Gambar yang sudah diupload:',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 100,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: images.length,
-                          itemBuilder: (context, index) {
-                            return Stack(
-                              children: [
-                                Container(
-                                  width: 100,
-                                  height: 100,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey[300]!),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: kIsWeb
-                                        ? Image.network(
-                                            images[index].path,
-                                            fit: BoxFit.cover,
-                                            loadingBuilder: (context, child, loadingProgress) {
-                                              if (loadingProgress == null) return child;
-                                              return Center(
-                                                child: CircularProgressIndicator(
-                                                  value: loadingProgress.expectedTotalBytes != null
-                                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                                      : null,
-                                                ),
-                                              );
-                                            },
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return const Center(
-                                                child: Icon(Icons.error, color: Colors.red),
-                                              );
-                                            },
-                                          )
-                                        : Image.file(
-                                            File(images[index].path),
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return const Center(
-                                                child: Icon(Icons.error, color: Colors.red),
-                                              );
-                                            },
-                                          ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 4,
-                                  right: 12,
-                                  child: GestureDetector(
-                                    onTap: () => _removeImage(itemName, index),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submitQualityCheck,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showImageSourceDialog(itemName),
-                    icon: const Icon(Icons.camera_alt, size: 16),
-                    label: Text(images.isEmpty ? 'Ambil Foto Bukti' : 'Tambah Foto Lain'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
+                      child: _isSubmitting
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'SIMPAN QUALITY CHECK',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  void _submitCheck() async {
-    if (_selectedCategory == null || _selectedCategory!.isEmpty) {
-      _showError('Pilih kategori produk');
-      return;
-    }
-    
-    if (_selectedProduct == null || _selectedProduct!.isEmpty) {
-      _showError('Pilih produk');
-      return;
-    }
-
-    for (var entry in _checkResults.entries) {
-      if (entry.value['type'] == 'numeric' && (entry.value['value'] == null || entry.value['value'].toString().isEmpty)) {
-        _showError('Isi nilai aktual untuk ${entry.key}');
-        return;
-      }
-      
-      if (entry.value['passed'] == false) {
-        final images = _ngImages[entry.key] ?? [];
-        if (images.isEmpty) {
-          _showError('Wajib upload foto bukti untuk item NG: ${entry.key}');
-          return;
-        }
-      }
-    }
-
-    setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(seconds: 2)); 
-    setState(() => _isSubmitting = false);
-
-    if (mounted) {
-      final productData = {
-        'category': _selectedCategory,
-        'name': _selectedProduct,
-        'checkResults': _checkResults,
-        'ngImages': _ngImages.map((key, value) => 
-          MapEntry(key, value.map((xfile) => xfile.path).toList())),
-        'checkDate': DateTime.now(),
-        'picId': widget.picId,
-      };
-      
-      print('Data yang disimpan: $productData');
-      
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Data Quality Check Berhasil Disimpan'), backgroundColor: Colors.green),
-      );
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 }

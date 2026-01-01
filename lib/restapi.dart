@@ -920,4 +920,109 @@ Future<bool> removeAll(String token, String project, String collection, String a
          }
     }
 
+    // Di restapi.dart - Tambahkan method berikut:
+
+// Method untuk insert quality check result
+Future insertQualityCheckResult({
+  required String targetId,
+  required String picId,
+  required String productName,
+  required String category,
+  required String customer,
+  required String status,
+  required List<Map<String, dynamic>> parameters,
+  required List<String> ngReasons,
+  required List<String> photos,
+  required String notes,
+}) async {
+  String uri = 'https://api.247go.app/v5/insert/';
+  
+  try {
+    final response = await http.post(Uri.parse(uri), body: {
+      'token': token,
+      'project': project,
+      'collection': 'quality_check_results',
+      'appid': appid,
+      'target_id': targetId,
+      'pic_id': picId,
+      'product_name': productName,
+      'category': category,
+      'customer': customer,
+      'check_date': DateTime.now().toIso8601String(),
+      'status': status,
+      'quantity_ok': status == 'OK' ? '1' : '0',
+      'quantity_ng': status == 'NG' ? '1' : '0',
+      'parameters': jsonEncode(parameters),
+      'ng_reasons': jsonEncode(ngReasons),
+      'photos': jsonEncode(photos),
+      'notes': notes,
+      'confirmed': 'false',
+      'disposition': '',
+    });
+
+    if (response.statusCode == 200) {
+      return response.body;
+    } else {
+      return '[]';
+    }
+  } catch (e) {
+    print('Error insertQualityCheckResult: $e');
+    return '[]';
+  }
+}
+
+// Method untuk get quality parameters by category and product
+Future getQualityParametersByProduct(String category, String product) async {
+  String uri = 'https://api.247go.app/v5/select_where/token/' + 
+      token + '/project/' + project + '/collection/quality_parameters/appid/' + 
+      appid + '/where_field/category/where_value/' + category;
+  
+  try {
+    final response = await http.get(Uri.parse(uri));
+    
+    if (response.statusCode == 200) {
+      var decoded = jsonDecode(response.body);
+      
+      if (decoded is Map<String, dynamic> && decoded['data'] != null) {
+        // Filter berdasarkan product
+        List<dynamic> data = decoded['data'] as List<dynamic>;
+        var productParams = data.firstWhere(
+          (item) => item['product'] == product,
+          orElse: () => null,
+        );
+        
+        if (productParams != null) {
+          return jsonEncode({'data': productParams});
+        }
+      }
+      return '{"data": null}';
+    } else {
+      return '{"data": null}';
+    }
+  } catch (e) {
+    print('Error getQualityParametersByProduct: $e');
+    return '{"data": null}';
+  }
+}
+
+// Method untuk get NG items (unconfirmed)
+Future getUnconfirmedNgItems() async {
+  String uri = 'https://api.247go.app/v5/select_where/token/' + 
+      token + '/project/' + project + '/collection/quality_check_results/appid/' + 
+      appid + '/where_field/status/where_value/NG';
+  
+  try {
+    final response = await http.get(Uri.parse(uri));
+    
+    if (response.statusCode == 200) {
+      return response.body;
+    } else {
+      return '[]';
+    }
+  } catch (e) {
+    print('Error getUnconfirmedNgItems: $e');
+    return '[]';
+  }
+}
+
 }
