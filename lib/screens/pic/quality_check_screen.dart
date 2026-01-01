@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:monitoringng1/restapi.dart';
+import 'package:monitoringng1/config.dart' as ApiConfig;
 import 'package:monitoringng1/models/daily_target_model.dart';
 
 class QualityCheckScreenV2 extends StatefulWidget {
@@ -21,7 +22,7 @@ class QualityCheckScreenV2 extends StatefulWidget {
 }
 
 class _QualityCheckScreenV2State extends State<QualityCheckScreenV2> {
-  final DataService _dataService = DataServiceV2();
+  final DataService _dataService = DataService();
   final ImagePicker _imagePicker = ImagePicker();
   
   List<Map<String, dynamic>> _parameters = [];
@@ -45,7 +46,7 @@ class _QualityCheckScreenV2State extends State<QualityCheckScreenV2> {
     setState(() => _isLoading = true);
     
     try {
-      final response = await _dataService.getQualityParameters(
+      final response = await _dataService.getQualityParametersByProduct(
         widget.target.category,
         widget.target.product,
       );
@@ -65,7 +66,7 @@ class _QualityCheckScreenV2State extends State<QualityCheckScreenV2> {
             };
             
             // Initialize NG image list
-            _ngImages[paramName] = [];
+            _ngImages[paramName] = <XFile>[];
             
             // Initialize NG reason controller
             _ngReasonControllers[paramName] = TextEditingController();
@@ -150,7 +151,9 @@ class _QualityCheckScreenV2State extends State<QualityCheckScreenV2> {
     for (var photo in photos) {
       try {
         final fileBytes = await photo.readAsBytes();
-        final fileName = await _dataService.uploadPhotoForNg(
+        final fileName = await _dataService.upload(
+          ApiConfig.token,
+          ApiConfig.project,
           fileBytes,
           photo.path.split('.').last,
         );
@@ -233,8 +236,8 @@ class _QualityCheckScreenV2State extends State<QualityCheckScreenV2> {
       final overallStatus = hasNg ? 'NG' : 'OK';
       
       // 4. Insert ke database
-      final result = await _dataService.insertQualityResult(
-        targetId: widget.target.id ?? '',
+      final result = await _dataService.insertQualityCheckResult(
+        targetId: widget.target.product,
         picId: widget.picId,
         productName: widget.target.product,
         category: widget.target.category,
@@ -358,7 +361,7 @@ class _QualityCheckScreenV2State extends State<QualityCheckScreenV2> {
                 decoration: BoxDecoration(
                   color: Colors.red[50],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red[100]),
+                  border: Border.all(color: Colors.red[100]!),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

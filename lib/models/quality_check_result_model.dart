@@ -1,3 +1,4 @@
+import 'dart:convert';
 class QualityCheckResult {
   final String id;
   final String targetId;

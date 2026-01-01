@@ -1,3 +1,4 @@
+import 'dart:convert';
 class QualityParameter {
   final String id;
   final String category;

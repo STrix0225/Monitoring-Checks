@@ -939,10 +939,10 @@ Future insertQualityCheckResult({
   
   try {
     final response = await http.post(Uri.parse(uri), body: {
-      'token': token,
-      'project': project,
+      'token': ApiConfig.token,
+      'project': 'monitoring_ng',
       'collection': 'quality_check_results',
-      'appid': appid,
+      'appid': ApiConfig.appid,
       'target_id': targetId,
       'pic_id': picId,
       'product_name': productName,
@@ -974,8 +974,8 @@ Future insertQualityCheckResult({
 // Method untuk get quality parameters by category and product
 Future getQualityParametersByProduct(String category, String product) async {
   String uri = 'https://api.247go.app/v5/select_where/token/' + 
-      token + '/project/' + project + '/collection/quality_parameters/appid/' + 
-      appid + '/where_field/category/where_value/' + category;
+      ApiConfig.token + '/project/monitoring_ng/collection/quality_parameters/appid/' + 
+      ApiConfig.appid + '/where_field/category/where_value/' + category;
   
   try {
     final response = await http.get(Uri.parse(uri));
@@ -1008,8 +1008,8 @@ Future getQualityParametersByProduct(String category, String product) async {
 // Method untuk get NG items (unconfirmed)
 Future getUnconfirmedNgItems() async {
   String uri = 'https://api.247go.app/v5/select_where/token/' + 
-      token + '/project/' + project + '/collection/quality_check_results/appid/' + 
-      appid + '/where_field/status/where_value/NG';
+      ApiConfig.token + '/project/monitoring_ng/collection/quality_check_results/appid/' + 
+      ApiConfig.appid + '/where_field/status/where_value/NG';
   
   try {
     final response = await http.get(Uri.parse(uri));
@@ -1025,4 +1025,34 @@ Future getUnconfirmedNgItems() async {
   }
 }
 
+// Method untuk insert quality parameters
+Future insertQualityParameters({
+   required String category,
+   required String product,
+   required List<Map<String, dynamic>> parameters,
+}) async {
+   String uri = 'https://api.247go.app/v5/insert/';
+
+   try {
+      final response = await http.post(Uri.parse(uri), body: {
+         'token': ApiConfig.token,
+         'project': 'monitoring_ng',
+         'collection': 'quality_parameters',
+         'appid': ApiConfig.appid,
+         'category': category,
+         'product': product,
+         'parameters': jsonEncode(parameters),
+         'created_at': DateTime.now().toIso8601String(),
+      });
+
+      if (response.statusCode == 200) {
+         return response.body;
+      } else {
+         return '[]';
+      }
+   } catch (e) {
+      print('Error insertQualityParameters: $e');
+      return '[]';
+   }
+}
 }

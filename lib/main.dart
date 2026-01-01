@@ -4,7 +4,9 @@ import 'package:monitoringng1/screens/auth/login_screen.dart';
 import 'package:monitoringng1/screens/head/dashboard_screen.dart';
 import 'package:monitoringng1/screens/head/ng_details_screen.dart';
 import 'package:monitoringng1/screens/pic/dashboard2_screen.dart';
+import 'package:monitoringng1/models/pic_model.dart';
 import 'package:monitoringng1/screens/pic/quality_check_screen.dart';
+import 'package:monitoringng1/models/daily_target_model.dart';
 
 void main() => runApp(
   DevicePreview(
@@ -43,47 +45,63 @@ class MyApp extends StatelessWidget {
         '/ng-details': (context) => NgDetailsScreen(
           productName: ModalRoute.of(context)?.settings.arguments as String? ?? 'Unknown Product',
         ),
-        '/pic-dashboard': (context) => PicDashboardScreen(
-          picId: 'PIC-BODY-001',
-          category: 'Body Parts',
-        ),
+        '/pic-dashboard': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+
+          String picId = 'PIC-BODY-001';
+          String category = 'Body Parts';
+
+          if (args is PicLineModel) {
+            picId = args.id_pic;
+            category = args.line.isNotEmpty ? args.line : category;
+          } else if (args is Map<String, dynamic>) {
+            picId = args['id_pic'] ?? args['picId'] ?? picId;
+            category = args['category'] ?? args['line'] ?? category;
+          }
+
+          return PicDashboardScreen(
+            picId: picId,
+            category: category,
+          );
+        },
         '/quality-check': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
-          
-          // Handle jika args null
-          if (args == null) {
-            return const QualityCheckScreen(
-              product: {},
-              picId: '',
+
+          DailyTargetModel target;
+          String picId = '';
+
+          if (args is DailyTargetModel) {
+            target = args;
+          } else if (args is Map<String, dynamic>) {
+            if (args.containsKey('target') && args['target'] is Map<String, dynamic>) {
+              target = DailyTargetModel.fromJson(args['target']);
+            } else {
+              target = DailyTargetModel(
+                customer: args['customer'] ?? '',
+                category: args['category'] ?? '',
+                product: args['product'] ?? '',
+                targetQty: args['targetQty'] ?? 0,
+                deliveryDate: args['deliveryDate'] is String
+                    ? DateTime.tryParse(args['deliveryDate']) ?? DateTime.now()
+                    : DateTime.now(),
+                createdAt: DateTime.now(),
+              );
+            }
+            picId = args['picId'] ?? '';
+          } else {
+            target = DailyTargetModel(
+              customer: '',
+              category: '',
+              product: '',
+              targetQty: 0,
+              deliveryDate: DateTime.now(),
+              createdAt: DateTime.now(),
             );
           }
-          
-          // Coba cast ke Map<String, dynamic>
-          if (args is Map<String, dynamic>) {
-            return QualityCheckScreen(
-              product: args['product'] ?? {},
-              picId: args['picId'] ?? '',
-            );
-          }
-          
-          // Jika args adalah Map<dynamic, dynamic>, convert ke Map<String, dynamic>
-          if (args is Map) {
-            final Map<String, dynamic> convertedArgs = {};
-            args.forEach((key, value) {
-              if (key is String) {
-                convertedArgs[key] = value;
-              }
-            });
-            return QualityCheckScreen(
-              product: convertedArgs['product'] ?? {},
-              picId: convertedArgs['picId'] ?? '',
-            );
-          }
-          
-          // Default fallback
-          return const QualityCheckScreen(
-            product: {},
-            picId: '',
+
+          return QualityCheckScreenV2(
+            target: target,
+            picId: picId,
           );
         },
       },
