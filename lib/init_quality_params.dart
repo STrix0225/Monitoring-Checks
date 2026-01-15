@@ -2,7 +2,7 @@ import 'package:monitoringng1/restapi.dart';
 import 'dart:convert';
 
 class QualityParamsInitializer {
-  static final DataService _ds = DataService();
+  static final DataService _ds = DataServiceV2();
   
   static Future<void> initializeAllParameters() async {
     print('🔄 Initializing quality parameters...');

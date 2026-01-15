@@ -1,18 +1,21 @@
-
 class DailyTargetModel {
-  final String customer;        // PT yang memesan
-  final String category;        // Kategori barang
-  final String product;         // Nama barang
-  final int targetQty;          // Target jumlah (pcs)
-  final DateTime deliveryDate;  // Tanggal pengiriman
-  final String status;          // Status: On Track, Late, Completed
-  final DateTime createdAt;     // Waktu dibuat
+  final String id;
+  final String customer;
+  final String category;
+  final String product;
+  final int targetQty;
+  final int actualQty; // BARU
+  final DateTime deliveryDate;
+  final String status;
+  final DateTime createdAt;
 
   DailyTargetModel({
+    required this.id,
     required this.customer,
     required this.category,
     required this.product,
     required this.targetQty,
+    this.actualQty = 0, // DEFAULT 0
     required this.deliveryDate,
     this.status = 'Not Started',
     required this.createdAt,
@@ -20,12 +23,16 @@ class DailyTargetModel {
 
   factory DailyTargetModel.fromJson(Map<String, dynamic> json) {
     return DailyTargetModel(
+      id: json['_id'] ?? json['id'] ?? '',
       customer: json['customer'] ?? '',
       category: json['category'] ?? '',
       product: json['product'] ?? '',
       targetQty: json['target_qty'] is int 
           ? json['target_qty'] 
           : int.tryParse(json['target_qty'].toString()) ?? 0,
+      actualQty: json['actual_qty'] is int  // BARU
+          ? json['actual_qty'] 
+          : int.tryParse(json['actual_qty'].toString()) ?? 0,
       deliveryDate: json['delivery_date'] != null
           ? DateTime.parse(json['delivery_date'])
           : DateTime.now(),
@@ -42,19 +49,40 @@ class DailyTargetModel {
       'category': category,
       'product': product,
       'target_qty': targetQty,
+      'actual_qty': actualQty, // BARU
       'delivery_date': deliveryDate.toIso8601String(),
       'status': status,
       'created_at': createdAt.toIso8601String(),
     };
   }
 
-  // Helper untuk status progress
+  // Helper untuk progress (0-1)
   double get progress {
-    // Untuk sementara 0, nanti bisa dihitung dari actual QC
-    return 0.0;
+    if (targetQty == 0) return 0.0;
+    return actualQty / targetQty;
   }
 
-  bool get isOnTrack => status == 'On Track';
-  bool get isLate => status == 'Late';
-  bool get isCompleted => status == 'Completed';
+  // Auto-update status berdasarkan progress
+  String get autoStatus {
+    if (actualQty >= targetQty) return 'Completed';
+    return 'On Progress';
+  }
+
+  // Copy with untuk update
+  DailyTargetModel copyWith({
+    int? actualQty,
+    String? status,
+  }) {
+    return DailyTargetModel(
+      id: id,
+      customer: customer,
+      category: category,
+      product: product,
+      targetQty: targetQty,
+      actualQty: actualQty ?? this.actualQty,
+      deliveryDate: deliveryDate,
+      status: status ?? this.status,
+      createdAt: createdAt,
+    );
+  }
 }

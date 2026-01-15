@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 class QualityParameter {
   final String id;
   final String category;
@@ -70,8 +71,8 @@ class ProductParameter {
       tolerance: json['tolerance'],
       type: json['type'] ?? 'text',
       unit: json['unit'],
-      required: json['required'] is bool 
-          ? json['required'] 
+      required: json['required'] is bool
+          ? json['required']
           : json['required']?.toString().toLowerCase() == 'true',
     );
   }

@@ -9,11 +9,11 @@ import 'package:monitoringng1/screens/pic/quality_check_screen.dart';
 import 'package:monitoringng1/models/daily_target_model.dart';
 
 void main() => runApp(
-  DevicePreview(
-    enabled: true,
-    builder: (context) => const MyApp(),
-  ),
-);
+      DevicePreview(
+        enabled: true,
+        builder: (context) => const MyApp(),
+      ),
+    );
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -43,65 +43,73 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/head-dashboard': (context) => const DashboardNgPage(),
         '/ng-details': (context) => NgDetailsScreen(
-          productName: ModalRoute.of(context)?.settings.arguments as String? ?? 'Unknown Product',
-        ),
-        '/pic-dashboard': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments;
-
-          String picId = 'PIC-BODY-001';
-          String category = 'Body Parts';
-
-          if (args is PicLineModel) {
-            picId = args.id_pic;
-            category = args.line.isNotEmpty ? args.line : category;
-          } else if (args is Map<String, dynamic>) {
-            picId = args['id_pic'] ?? args['picId'] ?? picId;
-            category = args['category'] ?? args['line'] ?? category;
-          }
-
-          return PicDashboardScreen(
-            picId: picId,
-            category: category,
-          );
-        },
+              productName: ModalRoute.of(context)?.settings.arguments as String? ?? 'Unknown Product',
+            ),
+        '/pic-dashboard': (context) => PicDashboardScreen(
+              picId: 'PIC-BODY-001',
+              category: 'Body Parts',
+            ),
         '/quality-check': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
 
-          DailyTargetModel target;
-          String picId = '';
-
-          if (args is DailyTargetModel) {
-            target = args;
-          } else if (args is Map<String, dynamic>) {
-            if (args.containsKey('target') && args['target'] is Map<String, dynamic>) {
-              target = DailyTargetModel.fromJson(args['target']);
-            } else {
-              target = DailyTargetModel(
-                customer: args['customer'] ?? '',
-                category: args['category'] ?? '',
-                product: args['product'] ?? '',
-                targetQty: args['targetQty'] ?? 0,
-                deliveryDate: args['deliveryDate'] is String
-                    ? DateTime.tryParse(args['deliveryDate']) ?? DateTime.now()
-                    : DateTime.now(),
+          if (args == null) {
+            return QualityCheckScreen(
+              target: DailyTargetModel(
+                id: '',
+                customer: '',
+                category: '',
+                product: '',
+                targetQty: 0,
+                actualQty: 0,
+                deliveryDate: DateTime.now(),
+                status: '',
                 createdAt: DateTime.now(),
+              ),
+              picId: '',
+            );
+          }
+
+          if (args is Map<String, dynamic>) {
+            final targetJson = args['target'] as Map<String, dynamic>?;
+            final picId = args['picId'] as String? ?? '';
+
+            if (targetJson != null) {
+              return QualityCheckScreen(
+                target: DailyTargetModel.fromJson(targetJson),
+                picId: picId,
               );
             }
-            picId = args['picId'] ?? '';
-          } else {
-            target = DailyTargetModel(
+
+            return QualityCheckScreen(
+              target: DailyTargetModel(
+                id: '',
+                customer: '',
+                category: '',
+                product: '',
+                targetQty: 0,
+                actualQty: 0,
+                deliveryDate: DateTime.now(),
+                status: '',
+                createdAt: DateTime.now(),
+              ),
+              picId: picId,
+            );
+          }
+
+          // Fallback: unknown args type
+          return QualityCheckScreen(
+            target: DailyTargetModel(
+              id: '',
               customer: '',
               category: '',
               product: '',
               targetQty: 0,
+              actualQty: 0,
               deliveryDate: DateTime.now(),
+              status: '',
               createdAt: DateTime.now(),
-            );
-          }
-
-          return QualityCheckScreenV2(
-            target: target,
-            picId: picId,
+            ),
+            picId: '',
           );
         },
       },
