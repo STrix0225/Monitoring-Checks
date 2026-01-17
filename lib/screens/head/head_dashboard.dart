@@ -1,12 +1,17 @@
+// ...existing code...
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:monitoringng2/providers/auth_provider.dart';
 import 'package:monitoringng2/providers/target_provider.dart';
 import 'package:monitoringng2/providers/ng_item_provider.dart';
+import 'package:monitoringng2/providers/pic_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:monitoringng2/screens/head/create_target_screen.dart';
 import 'package:monitoringng2/screens/head/create_pic_screen.dart';
 import 'package:monitoringng2/screens/head/ng_items_screen.dart';
 import 'package:monitoringng2/screens/head/target_list_screen.dart';
+import 'package:monitoringng2/models/ng_item_model.dart';
+import 'package:monitoringng2/models/target_model.dart';
 import 'package:monitoringng2/utils/constants.dart';
 import 'package:monitoringng2/widgets/custom_app_bar.dart';
 
@@ -30,6 +35,13 @@ class _HeadDashboardState extends State<HeadDashboard> {
       const NGItemsScreen(),
       const CreatePICScreen(),
     ];
+    
+    // Load data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NGItemProvider>(context, listen: false).loadPendingItems();
+      Provider.of<TargetProvider>(context, listen: false).loadActiveTargets();
+      // PicProvider already listens to Firestore in its constructor
+    });
   }
 
   @override
@@ -250,16 +262,14 @@ class DashboardHome extends StatelessWidget {
                           color: Colors.grey[600],
                         ),
                   ),
-                  Consumer<AuthProvider>(
-                    builder: (context, authProvider, child) {
-                      return Text(
-                        authProvider.user?.name ?? 'Kepala Departemen',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      );
-                    },
-                  ),
+                  Consumer<AuthProvider>(builder: (context, authProvider, child) {
+                    return Text(
+                      authProvider.user?.name ?? 'Kepala Departemen',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    );
+                  }),
                 ],
               ),
               const CircleAvatar(
@@ -303,6 +313,8 @@ class DashboardHome extends StatelessWidget {
                   child: Consumer<TargetProvider>(
                     builder: (context, targetProvider, child) {
                       return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: 5,
                         itemBuilder: (context, index) {
                           return _buildActivityItem(
@@ -368,8 +380,13 @@ class StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<TargetProvider, NGItemProvider>(
-      builder: (context, targetProvider, ngProvider, child) {
+    return Consumer3<TargetProvider, NGItemProvider, PicProvider>(
+      builder: (context, targetProvider, ngProvider, picProvider, child) {
+        // Count only pending (orange) items
+        final pendingCount = ngProvider.pendingItems
+            .where((item) => item.status == 'pending')
+            .length;
+        
         final stats = {
           'Target Aktif': {
             'value': targetProvider.activeTargets.length.toString(),
@@ -377,17 +394,17 @@ class StatsGrid extends StatelessWidget {
             'color': Colors.blue,
           },
           'Progress Hari Ini': {
-            'value': '${targetProvider.todayProgress}%',
+            'value': '${targetProvider.todayProgress.toStringAsFixed(0)}%',
             'icon': Icons.trending_up,
             'color': Colors.green,
           },
           'Barang NG': {
-            'value': ngProvider.pendingItems.length.toString(),
+            'value': pendingCount.toString(),
             'icon': Icons.warning,
             'color': Colors.orange,
           },
           'Total PIC': {
-            'value': '5', // TODO: Get from provider
+            'value': picProvider.pics.length.toString(),
             'icon': Icons.people,
             'color': Colors.purple,
           },
@@ -401,11 +418,23 @@ class StatsGrid extends StatelessWidget {
           mainAxisSpacing: 16,
           childAspectRatio: 1.2,
           children: stats.entries.map((entry) {
+            final title = entry.key;
+            VoidCallback? onTap;
+            if (title == 'Target Aktif') {
+              onTap = () => _showTargetList(context, targetProvider.activeTargets);
+            } else if (title == 'Total PIC') {
+              onTap = () => _showPICList(context, picProvider.pics);
+            } else if (title == 'Barang NG') {
+              onTap = () => _showNGItemsList(context, ngProvider.pendingItems);
+            }
+            
             return _buildStatCard(
-              title: entry.key,
+              context: context,
+              title: title,
               value: entry.value['value'] as String,
               icon: entry.value['icon'] as IconData,
               color: entry.value['color'] as Color,
+              onTap: onTap,
             );
           }).toList(),
         );
@@ -414,12 +443,14 @@ class StatsGrid extends StatelessWidget {
   }
 
   Widget _buildStatCard({
+    required BuildContext context,
     required String title,
     required String value,
     required IconData icon,
     required Color color,
+    VoidCallback? onTap,
   }) {
-    return Card(
+    final card = Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -459,5 +490,289 @@ class StatsGrid extends StatelessWidget {
         ),
       ),
     );
+
+    return onTap != null ? InkWell(onTap: onTap, child: card) : card;
+  }
+}
+
+// ...existing code...
+void _showPICList(BuildContext context, List<Pic> pics) async {
+  // Fetch latest PICs from Firestore similar to CreateTargetScreen
+  final snapshot = await FirebaseFirestore.instance
+      .collection('users')
+      .where('role', isEqualTo: 'pic')
+      .where('isActive', isEqualTo: true)
+      .get();
+
+  final fetched = snapshot.docs.map((doc) {
+    return Pic.fromDoc(doc);
+  }).toList();
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Daftar PIC'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 300,
+        child: fetched.isEmpty
+            ? const Center(child: Text('Tidak ada PIC'))
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: fetched.length,
+                itemBuilder: (context, index) {
+                  final pic = fetched[index];
+                  return ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text(pic.name),
+                    subtitle: Text(pic.department),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showTargetList(BuildContext context, List<DailyTarget> targets) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Daftar Target Aktif'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: targets.isEmpty
+            ? const Center(child: Text('Tidak ada target aktif'))
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: targets.length,
+                itemBuilder: (context, index) {
+                  final target = targets[index];
+                  final progress = target.quantity > 0
+                      ? ((target.currentProgress / target.quantity) * 100)
+                          .toStringAsFixed(0)
+                      : '0';
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.assignment,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      title: Text(
+                        target.productName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            'Kategori: ${target.category}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          Text(
+                            'Progress: $progress% (${ target.currentProgress}/${target.quantity})',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          Text(
+                            'Customer: ${target.customer}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ],
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'detail') {
+                            showTargetDetailsDialog(context, target);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'detail',
+                            child: Text('Lihat Detail'),
+                          ),
+                        ],
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'AKTIF',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showNGItemsList(BuildContext context, List<NGItem> ngItems) async {
+  try {
+    // Fetch latest NG items from Firestore - filter for pending (orange) only
+    final snapshot = await FirebaseFirestore.instance
+        .collection(AppConstants.ngItemsCollection)
+        .orderBy('ngTimestamp', descending: true)
+        .get();
+
+    final allItems = snapshot.docs.map((doc) {
+      return NGItem.fromFirestore(doc);
+    }).toList();
+
+    // Filter for pending status in Dart
+    final fetched = allItems
+        .where((item) => item.status == 'pending')
+        .toList();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Daftar Barang NG (Pending)'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: fetched.isEmpty
+              ? const Center(child: Text('Tidak ada barang NG pending'))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: fetched.length,
+                  itemBuilder: (context, index) {
+                    final item = fetched[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(item.status).withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.warning,
+                            color: _getStatusColor(item.status),
+                          ),
+                        ),
+                        title: Text(
+                          item.productName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              'Kategori: ${item.category}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            Text(
+                              'PIC: ${item.picName}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(item.status),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _getStatusLabel(item.status),
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+Color _getStatusColor(String status) {
+  switch (status) {
+    case 'pending':
+      return Colors.orange;
+    case 'confirmed_for_melt':
+      return Colors.blue;
+    case 'melted':
+      return Colors.green;
+    default:
+      return Colors.grey;
+  }
+}
+
+String _getStatusLabel(String status) {
+  switch (status) {
+    case 'pending':
+      return 'PENDING';
+    case 'confirmed_for_melt':
+      return 'KONFIRMASI';
+    case 'melted':
+      return 'PELEBURAN';
+    default:
+      return status.toUpperCase();
   }
 }

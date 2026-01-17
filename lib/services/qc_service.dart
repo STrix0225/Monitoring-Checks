@@ -166,54 +166,62 @@ class QCService {
     }
   }
 
-  // Upload QC photos
+  // Upload QC photos (parallel upload for faster processing)
   Future<List<String>> uploadQCPhotos(
     List<String> filePaths,
     String qcId,
   ) async {
-    final urls = <String>[];
-
-    for (int i = 0; i < filePaths.length; i++) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    
+    // Upload all photos in parallel
+    final uploadFutures = filePaths.asMap().entries.map((entry) async {
+      final i = entry.key;
+      final filePath = entry.value;
       try {
-        final filePath = filePaths[i];
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+        final fileName = '${timestamp}_$i.jpg';
         final ref = _storage.ref().child('${AppConstants.qcPhotosPath}/$qcId/$fileName');
 
         // Upload file
         await ref.putFile(File(filePath));
         final url = await ref.getDownloadURL();
-        urls.add(url);
+        return url;
       } catch (e) {
         print('Error uploading photo $i: $e');
+        return null;
       }
-    }
+    }).toList();
 
-    return urls;
+    final urls = await Future.wait(uploadFutures);
+    return urls.whereType<String>().toList();
   }
 
-  // Upload QC photos using bytes (web-compatible)
+  // Upload QC photos using bytes (web-compatible, parallel upload)
   Future<List<String>> uploadQCPhotosWithBytes(
     List<Uint8List> photoBytes,
     String qcId,
   ) async {
-    final urls = <String>[];
-
-    for (int i = 0; i < photoBytes.length; i++) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    
+    // Upload all photos in parallel
+    final uploadFutures = photoBytes.asMap().entries.map((entry) async {
+      final i = entry.key;
+      final bytes = entry.value;
       try {
-        final bytes = photoBytes[i];
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+        final fileName = '${timestamp}_$i.jpg';
         final ref = _storage.ref().child('${AppConstants.qcPhotosPath}/$qcId/$fileName');
 
         // Upload using putData (works on both web and mobile)
         await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
         final url = await ref.getDownloadURL();
-        urls.add(url);
+        return url;
       } catch (e) {
         print('Error uploading photo $i: $e');
+        return null;
       }
-    }
+    }).toList();
 
-    return urls;
+    final urls = await Future.wait(uploadFutures);
+    return urls.whereType<String>().toList();
   }
 
   // Validate checkpoint value

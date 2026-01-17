@@ -233,7 +233,7 @@ class _TargetListScreenState extends State<TargetListScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      _completeTarget(target);
+                      _completeTarget(target, context);
                     },
                     icon: const Icon(Icons.check_circle, size: 16),
                     label: const Text('Selesai'),
@@ -310,6 +310,10 @@ class _TargetListScreenState extends State<TargetListScreen> {
     );
   }
 
+}
+
+
+
   Widget _buildDetailItem(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -329,7 +333,7 @@ class _TargetListScreenState extends State<TargetListScreen> {
     );
   }
 
-  Future<void> _completeTarget(DailyTarget target) async {
+  Future<void> _completeTarget(DailyTarget target, BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -370,4 +374,69 @@ class _TargetListScreenState extends State<TargetListScreen> {
       }
     }
   }
+
+
+// Reusable dialog function so other screens can show target details
+void showTargetDetailsDialog(BuildContext context, DailyTarget target) {
+  String formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
+
+  Widget buildDetailItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Detail Target: ${target.productName}'),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            buildDetailItem('Produk', target.productName),
+            buildDetailItem('Kategori', target.category),
+            buildDetailItem('Customer', target.customer),
+            buildDetailItem('Jumlah Target', '${target.quantity} pcs'),
+            buildDetailItem('Progress Saat Ini', '${target.currentProgress} pcs'),
+            buildDetailItem('Progress', '${target.progressPercentage.toStringAsFixed(1)}%'),
+            buildDetailItem('Status', target.status),
+            buildDetailItem('Tanggal Target', formatDate(target.targetDate)),
+            buildDetailItem('Dibuat Pada', formatDate(target.createdAt)),
+            if (target.assignedTo.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'PIC Ditugaskan:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              ...target.assignedTo.map((pic) => Text('• $pic')).toList(),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+      ],
+    ),
+  );
 }

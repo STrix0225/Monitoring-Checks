@@ -1,3 +1,4 @@
+// ...existing code...
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:monitoringng2/config/firebase_config.dart';
@@ -12,6 +13,8 @@ import 'package:monitoringng2/screens/pic/pic_dashboard.dart';
 import 'package:monitoringng2/utils/constants.dart';
 import 'package:monitoringng2/models/user_model.dart';
 import 'package:device_preview/device_preview.dart';
+import 'package:monitoringng2/providers/pic_provider.dart';
+// ...existing code...
 
 class NavigationService {
   static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -25,10 +28,10 @@ Future<void> main() async {
   
   runApp(
     DevicePreview(
-        enabled: true,
-        builder: (context) => const MyApp(),
-      ),
-    );
+      enabled: true,
+      builder: (context) => const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -42,6 +45,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => TargetProvider()),
         ChangeNotifierProvider(create: (_) => NGItemProvider()),
+        ChangeNotifierProvider(create: (_) => PicProvider()), // <-- ditambahkan
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -61,6 +65,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// ...existing code...
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
