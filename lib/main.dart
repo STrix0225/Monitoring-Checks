@@ -1,118 +1,119 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:monitoringng2/config/firebase_config.dart';
+import 'package:monitoringng2/config/routes.dart';
+import 'package:monitoringng2/providers/auth_provider.dart';
+import 'package:monitoringng2/providers/theme_provider.dart';
+import 'package:monitoringng2/providers/target_provider.dart';
+import 'package:monitoringng2/providers/ng_item_provider.dart';
+import 'package:monitoringng2/screens/auth/login_screen.dart';
+import 'package:monitoringng2/screens/head/head_dashboard.dart';
+import 'package:monitoringng2/screens/pic/pic_dashboard.dart';
+import 'package:monitoringng2/utils/constants.dart';
+import 'package:monitoringng2/models/user_model.dart';
 import 'package:device_preview/device_preview.dart';
-import 'package:monitoringng1/screens/auth/login_screen.dart';
-import 'package:monitoringng1/screens/head/dashboard_screen.dart';
-import 'package:monitoringng1/screens/head/ng_details_screen.dart';
-import 'package:monitoringng1/screens/pic/dashboard2_screen.dart';
-import 'package:monitoringng1/models/pic_model.dart';
-import 'package:monitoringng1/screens/pic/quality_check_screen.dart';
-import 'package:monitoringng1/models/daily_target_model.dart';
 
-void main() => runApp(
-      DevicePreview(
+class NavigationService {
+  static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await FirebaseConfig.initializeFirebase();
+  
+  runApp(
+    DevicePreview(
         enabled: true,
         builder: (context) => const MyApp(),
       ),
     );
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Quality Check System',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 1,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ),
-      initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/head-dashboard': (context) => const DashboardNgPage(),
-        '/ng-details': (context) => NgDetailsScreen(
-              productName: ModalRoute.of(context)?.settings.arguments as String? ?? 'Unknown Product',
-            ),
-        '/pic-dashboard': (context) => PicDashboardScreen(
-              picId: 'PIC-BODY-001',
-              category: 'Body Parts',
-            ),
-        '/quality-check': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments;
-
-          if (args == null) {
-            return QualityCheckScreen(
-              target: DailyTargetModel(
-                id: '',
-                customer: '',
-                category: '',
-                product: '',
-                targetQty: 0,
-                actualQty: 0,
-                deliveryDate: DateTime.now(),
-                status: '',
-                createdAt: DateTime.now(),
-              ),
-              picId: '',
-            );
-          }
-
-          if (args is Map<String, dynamic>) {
-            final targetJson = args['target'] as Map<String, dynamic>?;
-            final picId = args['picId'] as String? ?? '';
-
-            if (targetJson != null) {
-              return QualityCheckScreen(
-                target: DailyTargetModel.fromJson(targetJson),
-                picId: picId,
-              );
-            }
-
-            return QualityCheckScreen(
-              target: DailyTargetModel(
-                id: '',
-                customer: '',
-                category: '',
-                product: '',
-                targetQty: 0,
-                actualQty: 0,
-                deliveryDate: DateTime.now(),
-                status: '',
-                createdAt: DateTime.now(),
-              ),
-              picId: picId,
-            );
-          }
-
-          // Fallback: unknown args type
-          return QualityCheckScreen(
-            target: DailyTargetModel(
-              id: '',
-              customer: '',
-              category: '',
-              product: '',
-              targetQty: 0,
-              actualQty: 0,
-              deliveryDate: DateTime.now(),
-              status: '',
-              createdAt: DateTime.now(),
-            ),
-            picId: '',
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => TargetProvider()),
+        ChangeNotifierProvider(create: (_) => NGItemProvider()),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: AppConstants.appName,
+            theme: themeProvider.currentTheme,
+            darkTheme: themeProvider.darkTheme,
+            themeMode: themeProvider.themeMode,
+            debugShowCheckedModeBanner: false,
+            navigatorKey: NavigationService.navigatorKey,
+            onGenerateRoute: Routes.generateRoute,
+            home: const AuthWrapper(),
           );
         },
+      ),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        if (authProvider.isLoading) {
+          return const SplashScreen();
+        }
+        if (!authProvider.isAuthenticated) {
+          return const LoginScreen();
+        }
+
+        // Redirect berdasarkan role user (gunakan enum UserRole)
+        final userRole = authProvider.user?.role;
+        if (userRole == UserRole.headDept) {
+          return const HeadDashboard();
+        } else if (userRole == UserRole.pic) {
+          return const PicDashboard();
+        }
+
+        return const LoginScreen();
       },
+    );
+  }
+}
+
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 30),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              AppConstants.appName,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'PT Futaba Indonesia',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,4 +1,4 @@
-import 'package:monitoringng1/restapi.dart';
+import 'package:monitoringng2/restapi.dart';
 import 'dart:convert';
 
 class QualityParamsInitializer {
