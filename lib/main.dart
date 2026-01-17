@@ -14,7 +14,6 @@ import 'package:monitoringng2/utils/constants.dart';
 import 'package:monitoringng2/models/user_model.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:monitoringng2/providers/pic_provider.dart';
-// ...existing code...
 
 class NavigationService {
   static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

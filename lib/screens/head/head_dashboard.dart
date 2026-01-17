@@ -274,12 +274,15 @@ class DashboardHome extends StatelessWidget {
                   }),
                 ],
               ),
-              const CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.blue,
-                child: Icon(
-                  Icons.person,
-                  color: Colors.white,
+              GestureDetector(
+                onTap: () => _showHeadProfile(context),
+                child: const CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.blue,
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -305,7 +308,7 @@ class DashboardHome extends StatelessWidget {
                           ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => _showAllActivities(context),
                       child: const Text('Lihat Semua'),
                     ),
                   ],
@@ -314,17 +317,51 @@ class DashboardHome extends StatelessWidget {
                 Expanded(
                   child: Consumer<TargetProvider>(
                     builder: (context, targetProvider, child) {
+                      // Get recent targets sorted by creation date
+                      final recentTargets = targetProvider.activeTargets
+                          .toList()
+                        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+                      // Show only 5 most recent activities
+                      final displayTargets = recentTargets.take(5).toList();
+
+                      if (displayTargets.isEmpty) {
+                        return const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.assignment_outlined,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'Belum ada aktivitas terbaru',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
                       return ListView.builder(
                         shrinkWrap: true,
                         physics: const AlwaysScrollableScrollPhysics(),
-                        itemCount: 5,
+                        itemCount: displayTargets.length,
                         itemBuilder: (context, index) {
+                          final target = displayTargets[index];
                           return _buildActivityItem(
                             title: 'Target baru dibuat',
-                            subtitle: 'Front pillar upper outer - 100 pcs',
-                            time: '10:30',
+                            subtitle:
+                                '${target.productName} - ${target.quantity} pcs',
+                            time: _formatTime(target.createdAt),
                             icon: Icons.add_circle,
                             color: Colors.green,
+                            onTap: () => _showTargetDetails(context, target),
                           );
                         },
                       );
@@ -345,10 +382,12 @@ class DashboardHome extends StatelessWidget {
     required String time,
     required IconData icon,
     required Color color,
+    VoidCallback? onTap,
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
+        onTap: onTap,
         leading: Container(
           width: 40,
           height: 40,
@@ -372,6 +411,327 @@ class DashboardHome extends StatelessWidget {
             color: Colors.grey,
           ),
         ),
+      ),
+    );
+  }
+
+  // Helper function to format time
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d';
+    } else {
+      return '${dateTime.day}/${dateTime.month}';
+    }
+  }
+
+  // Show target details dialog
+  void _showTargetDetails(BuildContext context, DailyTarget target) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Detail Target'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDetailItem('Produk', target.productName),
+            _buildDetailItem('Kategori', target.category),
+            _buildDetailItem('Quantity', '${target.quantity} pcs'),
+            _buildDetailItem('Customer', target.customer),
+            _buildDetailItem(
+                'Progress', '${target.currentProgress}/${target.quantity} pcs'),
+            _buildDetailItem('PIC', target.assignedTo.join(', ')),
+            _buildDetailItem('Tanggal Target',
+                '${target.targetDate.day}/${target.targetDate.month}/${target.targetDate.year}'),
+            _buildDetailItem('Dibuat',
+                '${target.createdAt.day}/${target.createdAt.month}/${target.createdAt.year}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show all activities dialog
+  void _showAllActivities(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Semua Aktivitas'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 500,
+          child: Consumer<TargetProvider>(
+            builder: (context, targetProvider, child) {
+              final allTargets = targetProvider.activeTargets.toList()
+                ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+              if (allTargets.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.assignment_outlined,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Belum ada aktivitas',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                itemCount: allTargets.length,
+                itemBuilder: (context, index) {
+                  final target = allTargets[index];
+                  final progress = target.quantity > 0
+                      ? ((target.currentProgress / target.quantity) * 100)
+                          .toStringAsFixed(0)
+                      : '0';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.add_circle,
+                          color: Colors.green,
+                        ),
+                      ),
+                      title: Text(
+                        'Target baru dibuat',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            '${target.productName} - ${target.quantity} pcs',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            'Progress: $progress% (${target.currentProgress}/${target.quantity})',
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.grey),
+                          ),
+                          Text(
+                            'PIC: ${target.assignedTo.join(", ")}',
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _formatTime(target.createdAt),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'AKTIF',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showTargetDetails(context, target);
+                      },
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show head profile dialog
+  void _showHeadProfile(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          final user = authProvider.user;
+          return AlertDialog(
+            title: const Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.blue,
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Profile Head'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProfileField('Nama', user?.name ?? 'Tidak diketahui'),
+                _buildProfileField('Email', user?.email ?? 'Tidak diketahui'),
+                _buildProfileField('Role', (user?.role ?? 'head').toString()),
+                _buildProfileField(
+                    'Department', user?.department ?? 'Tidak diketahui'),
+                _buildProfileField(
+                    'Status', user?.isActive == true ? 'Aktif' : 'Tidak Aktif'),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Dashboard untuk monitoring dan pengawasan target produksi',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tutup'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProfileField(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -805,7 +1165,7 @@ void _showTargetList(BuildContext context, List<DailyTarget> targets) {
                       trailing: PopupMenuButton<String>(
                         onSelected: (value) {
                           if (value == 'detail') {
-                            showTargetDetailsDialog(context, target);
+                            _showTargetDetails(context, target);
                           }
                         },
                         itemBuilder: (context) => [
@@ -952,6 +1312,66 @@ void _showNGItemsList(BuildContext context, List<NGItem> ngItems) async {
       ),
     );
   }
+}
+
+// Global helper function for target details
+void _showTargetDetails(BuildContext context, DailyTarget target) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Detail Target'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDetailItem('Produk', target.productName),
+          _buildDetailItem('Kategori', target.category),
+          _buildDetailItem('Quantity', '${target.quantity} pcs'),
+          _buildDetailItem('Customer', target.customer),
+          _buildDetailItem(
+              'Progress', '${target.currentProgress}/${target.quantity} pcs'),
+          _buildDetailItem('PIC', target.assignedTo.join(', ')),
+          _buildDetailItem('Tanggal Target',
+              '${target.targetDate.day}/${target.targetDate.month}/${target.targetDate.year}'),
+          _buildDetailItem('Dibuat',
+              '${target.createdAt.day}/${target.createdAt.month}/${target.createdAt.year}'),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildDetailItem(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            '$label:',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 Color _getStatusColor(String status) {

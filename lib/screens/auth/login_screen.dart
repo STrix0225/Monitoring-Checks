@@ -233,21 +233,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
 
-                      const SizedBox(height: 12),
-
-                      // Register Head/Admin Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 46,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pushNamed(Routes.registerHead);
-                          },
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('Daftar Head/Admin'),
-                        ),
-                      ),
-
                       const SizedBox(height: 16),
 
                       // Footer
