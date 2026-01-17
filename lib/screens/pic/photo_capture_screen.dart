@@ -255,7 +255,7 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen> {
             heroTag: 'gallery',
             onPressed: _pickFromGallery,
             mini: true,
-            backgroundColor: Colors.blue,
+            backgroundColor: Theme.of(context).primaryColor,
             child: const Icon(Icons.photo_library),
           ),
           const SizedBox(height: 16),

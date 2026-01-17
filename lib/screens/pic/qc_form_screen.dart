@@ -771,7 +771,7 @@ class _QCFormScreenState extends State<QCFormScreen> {
               children: [
                 // Target Info Card
                 Card(
-                  color: Colors.blue[50],
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -794,25 +794,25 @@ class _QCFormScreenState extends State<QCFormScreen> {
                                 'Item #$_currentItemNumber/${widget.target.quantity}',
                                 style: const TextStyle(fontSize: 12),
                               ),
-                              backgroundColor: Colors.blue[100],
+                              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Kategori: ${widget.target.category}',
-                          style: const TextStyle(color: Colors.grey),
+                          style: const TextStyle(color: Colors.black),
                         ),
                         Text(
                           'Customer: ${widget.target.customer}',
-                          style: const TextStyle(color: Colors.grey),
+                          style: const TextStyle(color: Colors.black),
                         ),
                         const SizedBox(height: 12),
                         LinearProgressIndicator(
                           value: (widget.target.currentProgress + 1) /
                               widget.target.quantity,
                           backgroundColor: Colors.grey[200],
-                          valueColor: const AlwaysStoppedAnimation(Colors.blue),
+                          valueColor: AlwaysStoppedAnimation(Theme.of(context).primaryColor),
                         ),
                         const SizedBox(height: 4),
                         Row(

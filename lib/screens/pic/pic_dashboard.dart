@@ -77,12 +77,12 @@ class _PicDashboardState extends State<PicDashboard> {
           // Header Info
           Container(
             padding: const EdgeInsets.all(20),
-            color: Colors.blue[50],
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: Colors.blue,
+                  backgroundColor: Theme.of(context).primaryColor,
                   child: Text(
                     (user?.name ?? 'P').substring(0, 1).toUpperCase(),
                     style: const TextStyle(
@@ -136,7 +136,7 @@ class _PicDashboardState extends State<PicDashboard> {
                     title: 'Target Aktif',
                     value: '0', // Will be updated by stream
                     icon: Icons.assignment,
-                    color: Colors.blue,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -333,7 +333,7 @@ class _PicDashboardState extends State<PicDashboard> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: target.isActive ? Colors.blue : Colors.grey,
+                    color: target.isActive ? Theme.of(context).primaryColor : Colors.grey,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -391,10 +391,10 @@ class _PicDashboardState extends State<PicDashboard> {
                     ),
                     Text(
                       '${target.progressPercentage.toStringAsFixed(1)}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue,
+                        color: Theme.of(context).primaryColor,
                       ),
                     ),
                   ],
@@ -406,7 +406,7 @@ class _PicDashboardState extends State<PicDashboard> {
                   valueColor: AlwaysStoppedAnimation<Color>(
                     target.progressPercentage >= 100
                         ? Colors.green
-                        : Colors.blue,
+                        : Theme.of(context).primaryColor,
                   ),
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(3),

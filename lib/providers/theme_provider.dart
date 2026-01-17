@@ -7,17 +7,19 @@ class ThemeProvider extends ChangeNotifier {
   ThemeData get darkTheme => _darkTheme;
   ThemeMode get themeMode => _themeMode;
 
+  static final Color _primaryGreen = const Color.fromARGB(255, 95, 142, 95);
+
   static final ThemeData _lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    primaryColor: Colors.blue,
+    primaryColor: _primaryGreen,
     colorScheme: ColorScheme.light(
-      primary: Colors.blue,
-      secondary: Colors.blueAccent,
+      primary: _primaryGreen,
+      secondary: _primaryGreen,
       surface: Colors.white,
     ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.blue,
+    appBarTheme: AppBarTheme(
+      backgroundColor: _primaryGreen,
       elevation: 0,
     ),
   );
@@ -25,14 +27,14 @@ class ThemeProvider extends ChangeNotifier {
   static final ThemeData _darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    primaryColor: Colors.blue,
+    primaryColor: _primaryGreen,
     colorScheme: ColorScheme.dark(
-      primary: Colors.blue,
-      secondary: Colors.blueAccent,
+      primary: _primaryGreen,
+      secondary: _primaryGreen,
       surface: Colors.grey[900]!,
     ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.blue,
+    appBarTheme: AppBarTheme(
+      backgroundColor: _primaryGreen,
       elevation: 0,
     ),
   );

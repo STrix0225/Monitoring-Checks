@@ -311,7 +311,7 @@ class _QCHistoryScreenState extends State<QCHistoryScreen> {
                     '${record.passedCheckpoints}/${record.totalCheckpoints}',
                     style: const TextStyle(fontSize: 12),
                   ),
-                  backgroundColor: Colors.blue[50],
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
                 ),
               ],
             ),
@@ -603,7 +603,7 @@ class _QCHistoryScreenState extends State<QCHistoryScreen> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      color: Colors.blue[50],
+      color: Theme.of(context).primaryColor.withOpacity(0.1),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -614,7 +614,7 @@ class _QCHistoryScreenState extends State<QCHistoryScreen> {
             'Success Rate', 
             '${successRate.toStringAsFixed(1)}%', 
             Icons.trending_up, 
-            Colors.blue
+            Theme.of(context).primaryColor
           ),
         ],
       ),
@@ -626,8 +626,8 @@ class _QCHistoryScreenState extends State<QCHistoryScreen> {
       children: [
         CircleAvatar(
           radius: 20,
-          backgroundColor: (color ?? Colors.blue).withOpacity(0.1),
-          child: Icon(icon, color: color ?? Colors.blue, size: 20),
+          backgroundColor: (color ?? Theme.of(context).primaryColor).withOpacity(0.1),
+          child: Icon(icon, color: color ?? Theme.of(context).primaryColor, size: 20),
         ),
         const SizedBox(height: 8),
         Text(

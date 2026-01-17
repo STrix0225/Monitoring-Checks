@@ -78,13 +78,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF1976D2),
-              Color(0xFF42A5F5),
+              Theme.of(context).primaryColor,
+              Theme.of(context).primaryColor.withOpacity(0.85),
             ],
           ),
         ),
@@ -104,12 +104,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Logo
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 40,
-                        backgroundColor: Colors.blue,
-                        child: Icon(
-                          Icons.verified_user,
-                          size: 40,
+                        backgroundColor: Theme.of(context).primaryColor,
+                        child: 
+                        Image.asset(
+                          'assets/images/logo-futaba.jpg',
+                          width: 40,
+                          height: 40,
                           color: Colors.white,
                         ),
                       ),
@@ -120,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         AppConstants.appName,
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue,
+                          color: Theme.of(context).primaryColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -203,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: ElevatedButton(
                               onPressed: authProvider.isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
+                                backgroundColor: Theme.of(context).primaryColor,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -250,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       // Footer
                       Text(
-                        '© 2024 ${AppConstants.companyName}',
+                        '© 2026 ${AppConstants.companyName}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
