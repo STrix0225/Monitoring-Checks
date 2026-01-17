@@ -67,7 +67,7 @@ class _HeadDashboardState extends State<HeadDashboard> {
                 value: 'profile',
                 child: Row(
                   children: [
-                    Icon(Icons.person, size: 20),
+                    Icon(Icons.person, size: 20, color: Colors.black),
                     SizedBox(width: 8),
                     Text('Profile'),
                   ],
@@ -77,7 +77,7 @@ class _HeadDashboardState extends State<HeadDashboard> {
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, size: 20),
+                    Icon(Icons.logout, size: 20, color: Colors.black),
                     SizedBox(width: 8),
                     Text('Logout'),
                   ],

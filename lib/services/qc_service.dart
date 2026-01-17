@@ -224,6 +224,34 @@ class QCService {
     return urls.whereType<String>().toList();
   }
 
+  // Attach photo URLs to both QC record and its NG item (if exists)
+  Future<void> attachPhotosToQCAndNG(String qcId, List<String> photoUrls) async {
+    if (photoUrls.isEmpty) return;
+
+    final batch = _db.batch();
+
+    // Update QC record photos
+    final qcRef = _db.collection(AppConstants.qcRecordsCollection).doc(qcId);
+    batch.update(qcRef, {
+      'photoUrls': FieldValue.arrayUnion(photoUrls),
+    });
+
+    // Find NG item by qcId and update its photos
+    final ngQuery = await _db
+        .collection(AppConstants.ngItemsCollection)
+        .where('qcId', isEqualTo: qcId)
+        .limit(1)
+        .get();
+    if (ngQuery.docs.isNotEmpty) {
+      final ngRef = ngQuery.docs.first.reference;
+      batch.update(ngRef, {
+        'photoUrls': FieldValue.arrayUnion(photoUrls),
+      });
+    }
+
+    await batch.commit();
+  }
+
   // Validate checkpoint value
   static bool validateCheckpointValue(
     Checkpoint checkpoint,

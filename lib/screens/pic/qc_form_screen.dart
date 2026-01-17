@@ -265,13 +265,10 @@ class _QCFormScreenState extends State<QCFormScreen> {
       // Generate a single QC ID for both photos and record
       final qcId = 'QC-${DateTime.now().millisecondsSinceEpoch}';
 
-      // Upload photos if any
-      List<String> photoUrls = [];
+      // Start photo upload in background to avoid blocking the save
+      Future<List<String>>? uploadFuture;
       if (_photoBytes.isNotEmpty) {
-        photoUrls = await _qcService.uploadQCPhotosWithBytes(
-          _photoBytes,
-          qcId,
-        );
+        uploadFuture = _qcService.uploadQCPhotosWithBytes(_photoBytes, qcId);
       }
 
       // Prepare checkpoint results
@@ -287,9 +284,23 @@ class _QCFormScreenState extends State<QCFormScreen> {
         category: widget.target.category,
         checkpointResults: checkpointResults,
         status: status,
-        photoUrls: photoUrls,
+        // Defer attaching photos to after upload completes
+        photoUrls: const [],
         notes: _notes.isNotEmpty ? _notes : null,
       );
+
+      // Chain photo attachment without blocking the UI
+      if (uploadFuture != null) {
+        uploadFuture.then((urls) async {
+          try {
+            if (urls.isNotEmpty) {
+              await _qcService.attachPhotosToQCAndNG(qcId, urls);
+            }
+          } catch (e) {
+            // Silently ignore background errors; main save already succeeded
+          }
+        });
+      }
 
       // Network tasks complete – stop loading before dialog
       setState(() => _isSubmitting = false);

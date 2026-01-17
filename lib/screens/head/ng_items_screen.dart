@@ -304,6 +304,21 @@ class _NGItemsScreenState extends State<NGItemsScreen> {
                   color: Colors.grey,
                 ),
               ),
+              if (item.isPending) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.check_circle, size: 18, color: Colors.blue),
+                    label: const Text('Konfirmasi Peleburan'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      side: const BorderSide(color: Colors.blue),
+                    ),
+                    onPressed: () => _confirmItem(item),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -334,6 +349,50 @@ class _NGItemsScreenState extends State<NGItemsScreen> {
         return 'PELEBURAN';
       default:
         return status.toUpperCase();
+    }
+  }
+
+  Future<void> _confirmItem(NGItem item) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final ngProvider = Provider.of<NGItemProvider>(context, listen: false);
+
+    final confirmedBy = auth.user?.name ?? 'unknown';
+
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Barang NG'),
+        content: Text(
+          'Apakah Anda yakin ingin mengkonfirmasi barang "${item.productName}" untuk dilebur?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Konfirmasi'),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed != true) return;
+
+    try {
+      await ngProvider.confirmForMelt(item.ngId, confirmedBy);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Status berhasil diubah ke KONFIRMASI.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengkonfirmasi: $e')),
+        );
+      }
     }
   }
 

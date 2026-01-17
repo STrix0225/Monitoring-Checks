@@ -74,7 +74,7 @@ class _PicDashboardState extends State<PicDashboard> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () => _logout(),
           ),
         ],
