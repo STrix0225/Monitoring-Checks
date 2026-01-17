@@ -35,7 +35,7 @@ class _HeadDashboardState extends State<HeadDashboard> {
       const NGItemsScreen(),
       const CreatePICScreen(),
     ];
-    
+
     // Load data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<NGItemProvider>(context, listen: false).loadPendingItems();
@@ -262,12 +262,14 @@ class DashboardHome extends StatelessWidget {
                           color: Colors.grey[600],
                         ),
                   ),
-                  Consumer<AuthProvider>(builder: (context, authProvider, child) {
+                  Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
                     return Text(
                       authProvider.user?.name ?? 'Kepala Departemen',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                     );
                   }),
                 ],
@@ -386,7 +388,7 @@ class StatsGrid extends StatelessWidget {
         final pendingCount = ngProvider.pendingItems
             .where((item) => item.status == 'pending')
             .length;
-        
+
         final stats = {
           'Target Aktif': {
             'value': targetProvider.activeTargets.length.toString(),
@@ -421,13 +423,17 @@ class StatsGrid extends StatelessWidget {
             final title = entry.key;
             VoidCallback? onTap;
             if (title == 'Target Aktif') {
-              onTap = () => _showTargetList(context, targetProvider.activeTargets);
+              onTap =
+                  () => _showTargetList(context, targetProvider.activeTargets);
+            } else if (title == 'Progress Hari Ini') {
+              onTap = () =>
+                  _showTodayProgress(context, targetProvider.activeTargets);
             } else if (title == 'Total PIC') {
               onTap = () => _showPICList(context, picProvider.pics);
             } else if (title == 'Barang NG') {
               onTap = () => _showNGItemsList(context, ngProvider.pendingItems);
             }
-            
+
             return _buildStatCard(
               context: context,
               title: title,
@@ -540,6 +546,204 @@ void _showPICList(BuildContext context, List<Pic> pics) async {
   );
 }
 
+void _showTodayProgress(BuildContext context, List<DailyTarget> targets) async {
+  // Group targets by PIC to show progress per PIC
+  Map<String, List<DailyTarget>> targetsByPic = {};
+
+  for (var target in targets) {
+    // Use the first assigned PIC if multiple are assigned
+    final picName = target.assignedTo.isNotEmpty
+        ? target.assignedTo.first
+        : 'Tidak ada PIC';
+
+    if (targetsByPic.containsKey(picName)) {
+      targetsByPic[picName]!.add(target);
+    } else {
+      targetsByPic[picName] = [target];
+    }
+  }
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Progress Hari Ini'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: targetsByPic.isEmpty
+            ? const Center(child: Text('Tidak ada target aktif hari ini'))
+            : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Overall progress summary
+                    Card(
+                      color: Colors.green.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.trending_up,
+                                    color: Colors.green, size: 20),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Total Progress Hari Ini',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Consumer<TargetProvider>(
+                              builder: (context, provider, child) {
+                                final overallProgress = provider.todayProgress;
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: LinearProgressIndicator(
+                                        value: overallProgress / 100,
+                                        backgroundColor: Colors.grey.shade300,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.green),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '${overallProgress.toStringAsFixed(1)}%',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Progress per PIC
+                    ...targetsByPic.entries.map((entry) {
+                      final picName = entry.key;
+                      final picTargets = entry.value;
+
+                      final totalQuantity = picTargets.fold(
+                          0, (sum, target) => sum + target.quantity);
+                      final totalProgress = picTargets.fold(
+                          0, (sum, target) => sum + target.currentProgress);
+                      final progressPercentage = totalQuantity > 0
+                          ? (totalProgress / totalQuantity * 100)
+                          : 0;
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ExpansionTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.blue.withOpacity(0.1),
+                            child: Icon(Icons.person,
+                                color: Colors.blue, size: 20),
+                          ),
+                          title: Text(
+                            picName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: LinearProgressIndicator(
+                                      value: progressPercentage / 100,
+                                      backgroundColor: Colors.grey.shade300,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        progressPercentage >= 80
+                                            ? Colors.green
+                                            : progressPercentage >= 50
+                                                ? Colors.orange
+                                                : Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${progressPercentage.toStringAsFixed(1)}%',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$totalProgress dari $totalQuantity pcs (${picTargets.length} target)',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          children: picTargets.map((target) {
+                            final targetProgress = target.quantity > 0
+                                ? (target.currentProgress /
+                                    target.quantity *
+                                    100)
+                                : 0;
+                            return ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.assignment, size: 16),
+                              title: Text(
+                                target.productName,
+                                style: const TextStyle(fontSize: 13),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                '${target.currentProgress}/${target.quantity} pcs (${targetProgress.toStringAsFixed(0)}%)',
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: targetProgress >= 100
+                                      ? Colors.green
+                                      : targetProgress >= 50
+                                          ? Colors.orange
+                                          : Colors.red,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${targetProgress.toStringAsFixed(0)}%',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+      ],
+    ),
+  );
+}
+
 void _showTargetList(BuildContext context, List<DailyTarget> targets) {
   showDialog(
     context: context,
@@ -589,7 +793,7 @@ void _showTargetList(BuildContext context, List<DailyTarget> targets) {
                             style: const TextStyle(fontSize: 11),
                           ),
                           Text(
-                            'Progress: $progress% (${ target.currentProgress}/${target.quantity})',
+                            'Progress: $progress% (${target.currentProgress}/${target.quantity})',
                             style: const TextStyle(fontSize: 11),
                           ),
                           Text(
@@ -657,9 +861,7 @@ void _showNGItemsList(BuildContext context, List<NGItem> ngItems) async {
     }).toList();
 
     // Filter for pending status in Dart
-    final fetched = allItems
-        .where((item) => item.status == 'pending')
-        .toList();
+    final fetched = allItems.where((item) => item.status == 'pending').toList();
 
     showDialog(
       context: context,
@@ -682,7 +884,8 @@ void _showNGItemsList(BuildContext context, List<NGItem> ngItems) async {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: _getStatusColor(item.status).withOpacity(0.2),
+                            color:
+                                _getStatusColor(item.status).withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
