@@ -354,6 +354,6 @@ Project ini dibuat untuk keperluan internal PT Futaba Indonesia.
 
 ---
 
-**Version**: 1.0.0  
+**Version**: 2.0.0  
 **Last Updated**: January 2026
 **Developed by**: Kelompok 6 untuk PT Futaba Indonesia
